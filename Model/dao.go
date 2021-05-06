@@ -1,20 +1,38 @@
 package Model
 
-import "github.com/jinzhu/gorm"
+import (
+	"fmt"
+	"github.com/jinzhu/gorm"
+)
 
-func CreateNewUser(Name string,Email string,pwd string,Site string,Country string,language string,M string,Sex bool,db *gorm.DB)  {
-
-	simple := User{
-		Name: Name,
-		Email: Email,
-		Pwd: pwd,
-		Sex: Sex,
-		Site: Site,
-		Country: Country,
-		Language: language,
-		Mechanism: M,
+func RegisterUser(db *gorm.DB,user *User)  {
+	result := db.Create(user)
+	if result.Error != nil {
+		fmt.Printf("Error")
+		return
 	}
+}
 
-	db.Save(&simple)
+func UpdateUser(db *gorm.DB,user *User)  {
+	result := db.Updates(user)
+	if result.Error != nil{
+		fmt.Printf("Error")
+		return
+	}
+}
+
+func LogoutUser(db *gorm.DB, id uint)  {
+	result := db.Delete(&User{},id)
+	if result.Error == nil{
+		allEntry := db.Where("UserID <> ?",id).Find(&Entry{})
+		allHistory := db.Where("UserID <> ?",id).Find(&History{})
+		if allHistory.Error == nil && allEntry.Error == nil{
+
+		}
+
+	}
+}
+
+func FindUser(db *gorm.DB,)  {
 
 }

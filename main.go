@@ -7,14 +7,13 @@ import (
 )
 
 func main(){
-	db,err := gorm.Open("postgres","host=localhost user=postgres dbname=postgres password=1234567 sslmode=disable")
+	db,err := gorm.Open("postgres","host=localhost user=ruomu dbname=wiki password=123456 sslmode=disable")
 	{
 		if err != nil {
 			panic(err)
 		}
-		db.AutoMigrate(&Model.Entry{},&Model.User{},&Model.Comments{})
 
-		Model.CreateNewUser("A"," "," "," "," "," "," ",true,db)
+		db.AutoMigrate(&Model.History{},&Model.Entry{},&Model.User{})
 	}
-	defer db.Close()
+	db.Close()
 }

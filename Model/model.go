@@ -7,27 +7,40 @@ import (
 
 type Entry struct {
 	gorm.Model
-	Title string
-	Author []User `gorm:"many2many:user_entries;"`
+	Title   string
+	UserID  uint
+	Tags    string
+	Cat     string
+	History []History
+	Content string
+}
+
+type History struct {
+	gorm.Model
+	EntryID uint
+	UserID  uint
 	Content string
 }
 
 type User struct {
 	gorm.Model
-	Name string
-	Email string
-	Pwd string
-	Site string
-	Country string
-	Language string
-	Entries	[]Entry `gorm:"many2many:user_entries;"`
-	Comments []Comments `gorm:"ForeignKey:UserID;"`
-	Mechanism string
-	Sex bool
+	Name        string
+	Email       string
+	Pwd         string
+	Avatar      string `gorm:"default:empty.jpg"`
+	Description string `gorm:"default:Ahhhh"`
+	Site        string `gorm:"default:empty"`
+	Country     string `gorm:"default:China"`
+	Language    string `gorm:"default:Chinese(Simpled)"`
+	Entries     []Entry
+	EditEntries []History
+	Mechanism   string `gorm:"default:empty"`
+	Sex         bool   `gorm:"default:0"`
+	Profession  string `gorm:"default:empty"`
 }
 
-type Comments struct {
-	gorm.Model
-	Content string
-	UserID uint
-}
+//type Comments struct {
+//	gorm.Model
+//	Content string
+//	UserID  uint
+//}
