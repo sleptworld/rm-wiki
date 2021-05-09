@@ -22,21 +22,28 @@ type History struct {
 	Content string
 }
 
+type UserGroup struct {
+	gorm.Model
+	GroupName string
+	Users     []User
+	Level     int
+}
 type User struct {
 	gorm.Model
 	Name        string
 	Email       string
 	Pwd         string
-	Avatar      string `gorm:"default:empty.jpg"`
-	Description string `gorm:"default:Ahhhh"`
-	Site        string `gorm:"default:empty"`
-	Country     string `gorm:"default:China"`
-	Language    string `gorm:"default:Chinese(Simpled)"`
+	UserGroupID uint
+	Avatar      string
+	Description string
+	Site        string
+	Country     string
+	Language    string
 	Entries     []Entry
 	EditEntries []History
-	Mechanism   string `gorm:"default:empty"`
-	Sex         bool   `gorm:"default:0"`
-	Profession  string `gorm:"default:empty"`
+	Mechanism   string
+	Sex         int
+	Profession  string
 }
 
 //type Comments struct {
