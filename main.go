@@ -1,39 +1,37 @@
 package main
 
 import (
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/sleptworld/test/Model"
+	"gorm.io/driver/postgres"
+	_ "gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 func main() {
-	db, err := gorm.Open("postgres", "host=localhost user=postgres dbname=wiki password=123456 sslmode=disable")
+	dsn := "host=localhost user=postgres dbname=wiki password=123456 sslmode=disable"
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	{
 		if err != nil {
 			panic(err)
 		}
 
-		db.AutoMigrate(&Model.History{}, &Model.Entry{}, &Model.User{})
+		db.AutoMigrate(&Model.User{}, &Model.Entry{}, &Model.History{})
 
-			//Model.RegisterUser(db, &Model.User{
-			//	Name:        "t",
-			//	Email:       "t",
-			//	Pwd:         "t",
-			//	Avatar:      "t",
-			//	Description: "t",
-			//	Site:        "t",
-			//	Country:     "t",
-			//	Language:    "t",
-			//	Mechanism:   " ",
-			//	Sex:         1,
-			//	Profession:  "t",
-			//})
-		}
-
-
-		defer func (){
-			recover()
-		}()
-		Model.FindUser(db,"id = ?","2",1)
-		db.Close()
+		//Model.RegisterUser(db, &Model.User{
+		//	Name:        "ruomu",
+		//	ID:          "test@test.com",
+		//	Pwd:         "t",
+		//	Avatar:      "t",
+		//	Description: "t",
+		//	Site:        "t",
+		//	Country:     "t",
+		//	Language:    "t",
+		//	Mechanism:   " ",
+		//	Sex:         1,
+		//	Profession:  "t",
+		//})
 	}
+
+	n,_,_ := Model.FindUser(db,"name = ?","ruomu",1)
+	if n ==nil{}
+}

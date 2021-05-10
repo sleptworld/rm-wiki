@@ -1,14 +1,14 @@
 package Model
 
 import (
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"gorm.io/gorm"
+	"time"
 )
 
 type Entry struct {
 	gorm.Model
 	Title   string
-	UserID  uint
+	UserID  string
 	Tags    string
 	Cat     string
 	History []History
@@ -18,7 +18,7 @@ type Entry struct {
 type History struct {
 	gorm.Model
 	EntryID uint
-	UserID  uint
+	UserID  string
 	Content string
 }
 
@@ -29,9 +29,11 @@ type UserGroup struct {
 	Level     int
 }
 type User struct {
-	gorm.Model
+	CreateAt time.Time
+	UpdateAt time.Time
+	gorm.DeletedAt
+	ID          string `gorm:"primaryKey"`
 	Name        string
-	Email       string
 	Pwd         string
 	UserGroupID uint
 	Avatar      string
@@ -44,6 +46,11 @@ type User struct {
 	Mechanism   string
 	Sex         int
 	Profession  string
+}
+
+type RealName struct {
+	id   uint
+	Name string
 }
 
 //type Comments struct {
