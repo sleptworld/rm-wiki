@@ -5,8 +5,10 @@ import (
 	"gorm.io/gorm"
 )
 
+// Tools for search
 func search (db *gorm.DB,query string,value string,number int) ([]map[string]interface{},*gorm.DB,error){
-	r := db.Where(query,value)
+	var r *gorm.DB
+	r = db.Where(query,value)
 	if r.Error == nil{
 		result := map[string]interface{}{}
 		var results []map[string]interface{}
@@ -29,24 +31,22 @@ func search (db *gorm.DB,query string,value string,number int) ([]map[string]int
 	}
 }
 
+// User Model's Dao
+
 func RegisterUser(db *gorm.DB,user *User) (int64,error) {
-	result := db.Create(user)
-	if result.Error != nil {
-		return result.RowsAffected,nil
-	}else {
-		return 0,result.Error
-	}
+	// Email only
+	res := db.Where(User{Email: user.Email}).FirstOrCreate(&user)
+	return res.RowsAffected,res.Error
 }
 
 func UpdateUser(db *gorm.DB,query string,value string,number int,user *User) (int64,error) {
-
 	_,h,err := FindUser(db,query,value,number)
 	if err == nil{
-		res := h.Updates(user)
-		if res.Error != nil{
+		if res := h.Updates(user); res.Error != nil{
 			return 0,res.Error
+		} else {
+			return res.RowsAffected,nil
 		}
-		return res.RowsAffected,nil
 	} else {
 		return 0,nil
 	}
@@ -55,7 +55,7 @@ func UpdateUser(db *gorm.DB,query string,value string,number int,user *User) (in
 func DeleteUser(db *gorm.DB, condition string, value string, number int) (int64,error) {
 	ans,r,err := FindUser(db,condition,value,number)
 	if ans == nil {
-		return 0, nil
+		return 0, errors.New("No valid user")
 	}
 	if err == nil{
 		result := r.Delete(&User{})
@@ -75,33 +75,113 @@ func FindUser(db *gorm.DB, query string, value string, number int) ([]map[string
 	return rs,r,err
 }
 
-func UserForeigned(db *gorm.DB,condition string) ([]map[string]interface{},error){
+func UserForeignKey(db *gorm.DB,m map[string]interface{},condition string) ([]map[string]interface{},error){
 	choice := []string{"Entries","EditEntries"}
+	userModel := User{
+		Model:gorm.Model{
+			ID: m["id"].(uint),
+		},
+	}
 	var result []map[string]interface{}
 	if IsContain(choice,condition){
-		r := db.Association(condition).Find(&result)
-		return result,r
+		err := db.Model(&userModel).Association(condition).Find(&result)
+		if err != nil{
+			return nil,err
+		} else {
+			return result,err
+		}
 	} else {
-		return nil,errors.New("Invalid condition.")
+		return nil,errors.New("invalid condition")
 	}
 }
 
+// Entry Model's Dao
+
 func CreateEntry(db *gorm.DB, entry *Entry){
-	db.Where(Entry{Title: entry.Title}).FirstOrCreate(entry)
+	// Title Only
+	db.Where(Entry{Title: entry.Title}).Session(&gorm.Session{FullSaveAssociations: true}).FirstOrCreate(entry)
 }
 
-func FindEntry(db *gorm.DB, condition string,value string,number int)  ([]map[string]interface{},*gorm.DB,error){
-	rs,h,err := search(db.Model(&Entry{}),condition,value,number)
-	return rs,h,err
+func FindEntry(db *gorm.DB, condition string,value string,number int)  ([]Entry,*gorm.DB,error){
+	var result []Entry
+	if r := db.Where(condition,value);r.Error == nil{
+		singleEntry := Entry{}
+		var lotsOfEntry []Entry
+		switch number {
+		case 1:
+			r.First(&singleEntry)
+			db.Model(&singleEntry).Preload("History").Find(&result)
+		case 0:
+			r.Find(&lotsOfEntry)
+			db.Model(&lotsOfEntry).Preload("History").Find(&result)
+		default:
+			return nil,r,errors.New("wrong")
+		}
+		return result,r,nil
+	} else {
+		return nil,r,r.Error
+	}
 }
 
+func UpdateEntry(db *gorm.DB,m *Entry,userid uint){
+	db.Transaction(func(tx *gorm.DB) error{
+		_, err := CreateHistory(tx,m,userid)
+		if err != nil {
+			return err
+		}
+		res := tx.Model(m).Updates(m)
+		return res.Error
+	})
+}
 func DeleteEntry(db *gorm.DB,condition string,value string,number int)  (int64,error){
-
 	_,h,err := FindEntry(db,condition,value,number)
 	if err == nil{
 		result := h.Delete(&Entry{})
 		return result.RowsAffected,nil
 	} else {
 		return 0,err
+	}
+}
+
+// History
+
+func CreateHistory(db *gorm.DB,e *Entry,userid uint) (int64,error){
+	res := db.Create(&History{
+		EntryID: e.ID,
+		UserID:  userid,
+		Content: e.Content,
+	})
+
+	return res.RowsAffected,res.Error
+}
+
+func DropHistory(db *gorm.DB,condition string,value string,number int){
+	m := db.Model(&History{})
+	_,h,err := search(m,condition,value,number)
+
+	if err != nil{
+		h.Delete(History{})
+	}
+
+}
+func CreateGroup(db *gorm.DB,group []UserGroup) (int,error){
+	for index,value := range group{
+		result := db.Where(UserGroup{GroupName: value.GroupName}).FirstOrCreate(&value)
+		if result.Error != nil{
+			return index,result.Error
+		}
+	}
+	return len(group),nil
+}
+
+func DeleteGroup(db *gorm.DB, id uint) (int64,error){
+	if result := db.Delete(&UserGroup{
+		Model:gorm.Model{
+			ID: id,
+		},
+	}) ;result.Error != nil{
+		return 0,result.Error
+	} else {
+		return result.RowsAffected,nil
 	}
 }

@@ -2,13 +2,12 @@ package Model
 
 import (
 	"gorm.io/gorm"
-	"time"
 )
 
 type Entry struct {
 	gorm.Model
 	Title   string
-	UserID  string
+	UserID  uint
 	Tags    string
 	Cat     string
 	History []History
@@ -18,7 +17,7 @@ type Entry struct {
 type History struct {
 	gorm.Model
 	EntryID uint
-	UserID  string
+	UserID  uint
 	Content string
 }
 
@@ -29,11 +28,9 @@ type UserGroup struct {
 	Level     int
 }
 type User struct {
-	CreateAt time.Time
-	UpdateAt time.Time
-	gorm.DeletedAt
-	ID          string `gorm:"primaryKey"`
+	gorm.Model
 	Name        string
+	Email       string
 	Pwd         string
 	UserGroupID uint
 	Avatar      string
