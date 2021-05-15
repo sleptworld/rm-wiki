@@ -1,4 +1,4 @@
-package Model
+package DB
 
 import (
 	"gorm.io/gorm"
@@ -51,7 +51,7 @@ type RealName struct {
 }
 
 //type Comments struct {
-//	gorm.Model
+//	gorm.DB
 //	Content string
 //	UserID  uint
 //}

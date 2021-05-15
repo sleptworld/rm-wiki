@@ -1,9 +1,11 @@
-package Model
+package DB
 
 import (
 	"errors"
 	"gorm.io/gorm"
 )
+
+
 
 // Tools for search
 func search (db *gorm.DB,query string,value string,number int) ([]map[string]interface{},*gorm.DB,error){
@@ -31,7 +33,7 @@ func search (db *gorm.DB,query string,value string,number int) ([]map[string]int
 	}
 }
 
-// User Model's Dao
+// User DB's Dao
 
 func RegisterUser(db *gorm.DB,user *User) (int64,error) {
 	// Email only
@@ -83,7 +85,7 @@ func UserForeignKey(db *gorm.DB,m map[string]interface{},condition string) ([]ma
 		},
 	}
 	var result []map[string]interface{}
-	if IsContain(choice,condition){
+	if isContain(choice,condition){
 		err := db.Model(&userModel).Association(condition).Find(&result)
 		if err != nil{
 			return nil,err
@@ -95,7 +97,7 @@ func UserForeignKey(db *gorm.DB,m map[string]interface{},condition string) ([]ma
 	}
 }
 
-// Entry Model's Dao
+// Entry DB's Dao
 
 func CreateEntry(db *gorm.DB, entry *Entry){
 	// Title Only
