@@ -1,21 +1,25 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"github.com/opentracing/opentracing-go"
 	"github.com/sleptworld/test/DB"
-	"github.com/sleptworld/test/Middleware"
+	"golang.org/x/net/context"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"reflect"
 )
 
-func t (a interface{}) (interface{}){
-	typeOfA := reflect.TypeOf(a)
-	alns := reflect.New(typeOfA)
-	fmt.Println(alns.Type())
-	return alns
+type test interface {
+	say()
+}
+
+type t struct {
+	r int
+}
+
+
+func (test *t) say(){
+	test.r = 10
 }
 
 func main() {
@@ -51,33 +55,31 @@ func main() {
 		//	},
 		//})
 		//
-		//DB.RegisterUser(session,&DB.User{
-		//	Name:        "ruomu",
-		//	Email:       "test@test.com",
-		//	Pwd:         "t",
-		//	UserGroupID: 1,
-		//	Avatar:      "",
-		//	Description: "",
-		//	Site:        "",
-		//	Country:     "",
-		//	Language:    "",
-		//	Entries:     []DB.Entry{
-		//		{
-		//			Title: "no",
-		//			History: nil,
-		//			Content: "hello",
-		//		},
-		//	},
-		//	EditEntries: nil,
-		//	Mechanism:   "",
-		//	Sex:         0,
-		//	Profession:  "",
-		//})
+		ttt := DB.User{
+			Name:        "ruomu",
+			Email:       "test@test.com",
+			UserGroupID: 1,
+			Entries:     []DB.Entry{
+				{
+					Title: "no",
+					History: nil,
+					Content: "hello",
+				},
+			},
+			EditEntries: nil,
+			Sex:         0,
+		}
+
+		DB.UserPretreatment(&ttt,"helloworld@123")
+		if _,err := DB.RegisterUser(session,&ttt);err != nil{
+			fmt.Println(err)
+		}
+
 
 		//DB.RegisterUser(session,&DB.User{
-		//	Name:        "ruomu",
-		//	Email:       "ruomu@test.com",
-		//	Pwd:         "t",
+		//	Name:        "zwp",
+		//	Email:       "zwp@test.com",
+		//	Pwd:         "zhouweiping123",
 		//	UserGroupID: 1,
 		//	Avatar:      "t",
 		//	Description: "t",
@@ -90,15 +92,21 @@ func main() {
 		//	Sex:         0,
 		//	Profession:  "t",
 		//})
-		err := Middleware.InitSearcher(session)
-		if err != nil {
-			return
-		} else {
-			res := Middleware.Search("hello",&Middleware.SearchOpt)
-			fmt.Println(res)
-		}
+		//err := Middleware.InitSearcher(session)
+		//if err != nil {
+		//	return
+		//} else {
+		//	res := Middleware.Search("hello",&Middleware.SearchOpt)
+		//	fmt.Println(res)
+		//}
 
 	}
+
+	//b := t{r: 6}
+	//b.say()
+	//fmt.Println(b)
+
+
 
 	return
 }

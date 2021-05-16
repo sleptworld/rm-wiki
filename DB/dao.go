@@ -2,10 +2,14 @@ package DB
 
 import (
 	"errors"
+	"fmt"
 	"gorm.io/gorm"
 )
 
 
+var (
+	aesKey = make([]byte,32)
+)
 
 // Tools for search
 func search (db *gorm.DB,query string,value string,number int) ([]map[string]interface{},*gorm.DB,error){
@@ -41,6 +45,18 @@ func RegisterUser(db *gorm.DB,user *User) (int64,error) {
 	return res.RowsAffected,res.Error
 }
 
+//func (u *User) BeforeCreate(tx *gorm.DB) (err error){
+//	rand.Read(aesKey)
+//	fmt.Println(aesKey)
+//	p,_ := tools.PwdEncrypt(u.Pwd,aesKey[:])
+//	if p == nil{}
+//	return
+//}
+
+func (u *User) BeforeCreate(tx *gorm.DB) (err error){
+	fmt.Println(u.Pwd)
+	return
+}
 func UpdateUser(db *gorm.DB,query string,value string,number int,user *User) (int64,error) {
 	_,h,err := FindUser(db,query,value,number)
 	if err == nil{

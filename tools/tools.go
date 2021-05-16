@@ -20,17 +20,30 @@ func FileIsExist(path string) bool{
 	return true
 }
 
-func PwdEncrypt(p string,aesKey []byte) (string,error){
+func PwdEncrypt(p string,aesKey []byte) ([]byte,error){
 	s512 := sha512.Sum512([]byte(p))
 	b,err := bcrypt.GenerateFromPassword(s512[:],bcrypt.MinCost)
 	if err != nil{
-		return "",err
+		return nil,err
 	}
 	encrypt, err := Encrypt(b, aesKey)
 	if err != nil {
-		return "",err
+		return nil,err
 	}
-	return string(encrypt),nil
+	return encrypt,nil
+}
+
+func PwdConfirm(s string,d []byte,k []byte) (bool,error){
+	s512 := sha512.Sum512([]byte(s))
+	encrypt ,err := Decrypt(d,k)
+	if err != nil{
+		return false,err
+	}
+	if err = bcrypt.CompareHashAndPassword(encrypt,s512[:]);err == nil {
+		return true,nil
+	} else {
+		return false,nil
+	}
 }
 
 func PwdDecrypt(p string,aesKey []byte) bool {

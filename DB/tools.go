@@ -3,6 +3,8 @@ package DB
 import (
 	"fmt"
 	"github.com/goinggo/mapstructure"
+	"github.com/sleptworld/test/tools"
+	"math/rand"
 )
 
 func isContain(items []string , item string) bool{
@@ -19,5 +21,13 @@ func mapToStruct(m map[string]interface{},s interface{}) (error){
 		return err
 	} else {
 		return nil
+	}
+}
+
+func UserPretreatment(u *User,p string){
+	rand.Read(aesKey)
+	pwd,err := tools.PwdEncrypt(p,aesKey)
+	if err == nil{
+		u.Pwd = pwd
 	}
 }

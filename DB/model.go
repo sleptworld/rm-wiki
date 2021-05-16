@@ -31,7 +31,7 @@ type User struct {
 	gorm.Model
 	Name        string
 	Email       string
-	Pwd         string
+	Pwd         []byte
 	UserGroupID uint
 	Avatar      string
 	Description string
