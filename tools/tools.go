@@ -5,9 +5,29 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/sha512"
+	"fmt"
+	"github.com/goinggo/mapstructure"
 	"golang.org/x/crypto/bcrypt"
 	"os"
 )
+
+func mapToStruct(m map[string]interface{},s interface{}) (error){
+	if err := mapstructure.Decode(m,s);err != nil{
+		fmt.Println(err)
+		return err
+	} else {
+		return nil
+	}
+}
+
+func IsContain(items []string , item string) bool{
+	for _,eachitem := range items{
+		if eachitem == item{
+			return true
+		}
+	}
+	return false
+}
 
 func FileIsExist(path string) bool{
 	_,err := os.Stat(path)
@@ -33,17 +53,14 @@ func PwdEncrypt(p string,aesKey []byte) ([]byte,error){
 	return encrypt,nil
 }
 
-func PwdConfirm(s string,d []byte,k []byte) (bool,error){
+func PwdConfirm(s string,d []byte,k []byte) error {
 	s512 := sha512.Sum512([]byte(s))
 	encrypt ,err := Decrypt(d,k)
 	if err != nil{
-		return false,err
+		return err
 	}
-	if err = bcrypt.CompareHashAndPassword(encrypt,s512[:]);err == nil {
-		return true,nil
-	} else {
-		return false,nil
-	}
+	err = bcrypt.CompareHashAndPassword(encrypt,s512[:])
+	return err
 }
 
 func PwdDecrypt(p string,aesKey []byte) bool {

@@ -2,13 +2,8 @@ package DB
 
 import (
 	"errors"
-	"fmt"
+	"github.com/sleptworld/test/tools"
 	"gorm.io/gorm"
-)
-
-
-var (
-	aesKey = make([]byte,32)
 )
 
 // Tools for search
@@ -41,22 +36,10 @@ func search (db *gorm.DB,query string,value string,number int) ([]map[string]int
 
 func RegisterUser(db *gorm.DB,user *User) (int64,error) {
 	// Email only
-	res := db.Where(User{Email: user.Email}).FirstOrCreate(&user)
+	res := db.Create(user)
 	return res.RowsAffected,res.Error
 }
 
-//func (u *User) BeforeCreate(tx *gorm.DB) (err error){
-//	rand.Read(aesKey)
-//	fmt.Println(aesKey)
-//	p,_ := tools.PwdEncrypt(u.Pwd,aesKey[:])
-//	if p == nil{}
-//	return
-//}
-
-func (u *User) BeforeCreate(tx *gorm.DB) (err error){
-	fmt.Println(u.Pwd)
-	return
-}
 func UpdateUser(db *gorm.DB,query string,value string,number int,user *User) (int64,error) {
 	_,h,err := FindUser(db,query,value,number)
 	if err == nil{
@@ -101,7 +84,7 @@ func UserForeignKey(db *gorm.DB,m map[string]interface{},condition string) ([]ma
 		},
 	}
 	var result []map[string]interface{}
-	if isContain(choice,condition){
+	if tools.IsContain(choice,condition){
 		err := db.Model(&userModel).Association(condition).Find(&result)
 		if err != nil{
 			return nil,err
@@ -173,12 +156,15 @@ func CreateHistory(db *gorm.DB,e *Entry,userid uint) (int64,error){
 	return res.RowsAffected,res.Error
 }
 
-func DropHistory(db *gorm.DB,condition string,value string,number int){
+func DropHistory(db *gorm.DB,condition string,value string,number int) (int64,error){
 	m := db.Model(&History{})
 	_,h,err := search(m,condition,value,number)
 
 	if err != nil{
-		h.Delete(History{})
+		return 0,err
+	} else {
+		result := h.Delete(&History{})
+		return result.RowsAffected,result.Error
 	}
 
 }

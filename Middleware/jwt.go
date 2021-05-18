@@ -4,6 +4,7 @@ import (
 	"errors"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
+	"github.com/sleptworld/test/Config"
 	"net/http"
 )
 
@@ -11,7 +12,7 @@ var (
 	Malformed   = "10001"
 	Expired     = "10002"
 	NotValidYet = "10003"
-	NOVALID     = "10000"
+	INVALID     = "10000"
 )
 
 type JWT struct {
@@ -43,16 +44,16 @@ func (j *JWT) ParserToken(tokenString string) (*CustomClaims, error) {
 			} else if ve.Errors&jwt.ValidationErrorNotValidYet != 0 {
 				return nil, errors.New(NotValidYet)
 			} else {
-				return nil, errors.New(NOVALID)
+				return nil, errors.New(INVALID)
 			}
 		}
-		return nil, errors.New(NOVALID)
+		return nil, errors.New(INVALID)
 	} else {
 		claims, ok := token.Claims.(*CustomClaims)
 		if ok && token.Valid {
 			return claims, nil
 		}
-		return nil, errors.New(NOVALID)
+		return nil, errors.New(INVALID)
 	}
 }
 
@@ -75,7 +76,7 @@ func Jwt() gin.HandlerFunc {
 			return
 		}
 
-		j := NewJWT("hello,world")
+		j := NewJWT(Config.JWTKey)
 
 		claims, err := j.ParserToken(token)
 
