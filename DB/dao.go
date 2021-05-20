@@ -4,9 +4,18 @@ import (
 	"errors"
 	"github.com/sleptworld/test/tools"
 	"gorm.io/gorm"
+	"strings"
 )
 
+type Dao interface {
+	Create()
+	Delete()
+	Update()
+	Query()
+}
+
 // Tools for search
+
 func search (db *gorm.DB,query string,value string,number int) ([]map[string]interface{},*gorm.DB,error){
 	var r *gorm.DB
 	r = db.Where(query,value)
@@ -166,8 +175,85 @@ func DropHistory(db *gorm.DB,condition string,value string,number int) (int64,er
 		result := h.Delete(&History{})
 		return result.RowsAffected,result.Error
 	}
-
 }
+
+// Cat
+
+func CreateCat(db *gorm.DB,c *Cat) (int64,error){
+	res := db.Where("path = ?",c.Path).FirstOrCreate(c)
+	return res.RowsAffected,res.Error
+}
+
+func SearchCat(db *gorm.DB,condition string,value string) ([]Cat,error){
+	var res []Cat
+	result := db.Where(condition,value).Find(&res)
+	return res,result.Error
+}
+
+func CatNode(db *gorm.DB,catNode string)  (Cat,error){
+	var res Cat
+	result := db.Where("path ~ ?",catNode).First(&res)
+	return res,result.Error
+}
+
+func CatChildren(db *gorm.DB,catNode string) ([]Cat,error){
+	res,err := SearchCat(db,"path ~ ?",catNode+".*{1}")
+	return res,err
+}
+
+func CatFind(db *gorm.DB,catNode string) ([]Cat,error){
+	res,err := SearchCat(db,"path <@ ?",catNode)
+	return res, err
+}
+
+func CatParent(db *gorm.DB,catNode string) ([]Cat,error)  {
+	res,err := SearchCat(db,"path ~ ?","*{1}."+catNode)
+	comma := strings.Index(res[0].Path,".")
+	p := res[0].Path[0:comma]
+	res,err = SearchCat(db,"path ~ ?",p)
+	return res,err
+}
+
+func CatBrother(db *gorm.DB,catNode string) ([]Cat,error){
+	if p,err := CatParent(db,catNode);err == nil{
+		parent := p[0].Path
+		p,err = SearchCat(db,"path ~ ?",parent+"."+"!"+catNode+"{1}")
+
+		return p,err
+	} else {
+		return p,err
+	}
+}
+
+func Cat2Entries(db *gorm.DB,c *Cat) ([]Entry,error){
+	var res []Entry
+	r := db.Model(c).Association("Entries").Find(&res)
+	if r == nil{
+		return res,r
+	} else {
+		return nil,r
+	}
+}
+
+func DeleteCat(db *gorm.DB,c *Cat) (int64,error){
+	res := db.Delete(c)
+	return res.RowsAffected,res.Error
+}
+
+// Tag
+
+func CreateTag(db *gorm.DB,t *Tag) (int64,error){
+	res := db.Where("name = ?",t.Name).First(t)
+	return res.RowsAffected,res.Error
+}
+
+func DeleteTag(db *gorm.DB,t *Tag) (int64,error){
+	res := db.Delete(t)
+	return res.RowsAffected,res.Error
+}
+
+// Group
+
 func CreateGroup(db *gorm.DB,group []UserGroup) (int,error){
 	for index,value := range group{
 		result := db.Where(UserGroup{GroupName: value.GroupName}).FirstOrCreate(&value)

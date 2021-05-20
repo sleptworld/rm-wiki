@@ -1,52 +1,43 @@
 package main
 
 import (
+	"github.com/gin-gonic/gin"
 	"github.com/opentracing/opentracing-go"
+	v1 "github.com/sleptworld/test/Controller/v1"
 	"github.com/sleptworld/test/DB"
-	"github.com/sleptworld/test/Model"
 	"golang.org/x/net/context"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
+var (
+	Database *gorm.DB
+	err error
+)
 func main() {
 	dsn := "host=localhost user=postgres dbname=wiki password=123456 sslmode=disable"
 	DB.InitJeager()
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	Database,err = gorm.Open(postgres.Open(dsn),&gorm.Config{})
 	{
 		if err != nil {
 			panic(err)
 		}
 
-		_ = db.Use(&DB.OpentracingPlugin{})
+		_ = Database.Use(&DB.OpentracingPlugin{})
 
-		err := db.Debug().AutoMigrate(&DB.Cat{})
-		if err != nil {
-			return
-		} else {
-			db.Debug().Raw("CREATE INDEX path_gist_idx ON cats USING gist(path);" +
-				"CREATE INDEX path_idx ON cats USING btree(path);")
-		}
+		Database.Debug().AutoMigrate(&DB.UserGroup{},&DB.Cat{}, &DB.User{},&DB.Entry{}, &DB.History{}, &DB.Tag{}, &DB.Draft{})
 
 		span := opentracing.StartSpan("gormTracint")
 		defer span.Finish()
 
-		ctx := opentracing.ContextWithSpan(context.Background(),span)
+		ctx := opentracing.ContextWithSpan(context.Background(), span)
 
+		session := Database.WithContext(ctx).Debug()
 
-		session := db.WithContext(ctx)
+		r := gin.Default()
 
-		Model.RegCheck(&Model.Reg{
-			Name:      "zhouweiping",
-			Email:     "zwp@qq.com",
-			Pwd:       "heloworld@123",
-			Country:   "zh",
-			Language:  "zh",
-			Sex:       0,
-			Profesion: "t",
-		},session)
+		r.POST("/reg",)
 
 	}
-
 	return
 }

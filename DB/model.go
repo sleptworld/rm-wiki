@@ -7,14 +7,14 @@ import (
 
 type Tag struct {
 	gorm.Model
-	Name    string
+	Name    string   `gorm:"size:20"`
 	Entries []*Entry `gorm:"many2many:tag_entries"`
 }
 
 type Cat struct {
-	ID          int32
-	Path        ltree  `gorm:"type:ltree"`
-	Entries     []Entry
+	ID      int32   `gorm:"primaryKey;autoIncrement"`
+	Path    string  `gorm:"type:ltree;unique"`
+	Entries []Entry `gorm:"foreignKey:CatID"`
 }
 
 type Entry struct {
@@ -24,7 +24,7 @@ type Entry struct {
 	Lock      bool `gorm:"not null;default:false"`
 	EditingBy uint
 	Tags      []*Tag `gorm:"many2many:tag_entries"`
-	CatID     uint
+	CatID     int32
 	History   []History
 	Content   string `gorm:"size:15000"`
 	Info      string `gorm:"default:Create;size:30"`
