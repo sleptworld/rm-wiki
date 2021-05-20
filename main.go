@@ -8,36 +8,67 @@ import (
 	"golang.org/x/net/context"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"net/http"
 )
 
-var (
-	Database *gorm.DB
-	err error
-)
 func main() {
+	var err error
 	dsn := "host=localhost user=postgres dbname=wiki password=123456 sslmode=disable"
 	DB.InitJeager()
-	Database,err = gorm.Open(postgres.Open(dsn),&gorm.Config{})
+	DB.Db,err = gorm.Open(postgres.Open(dsn),&gorm.Config{})
 	{
 		if err != nil {
 			panic(err)
 		}
 
-		_ = Database.Use(&DB.OpentracingPlugin{})
+		_ = DB.Db.Use(&DB.OpentracingPlugin{})
 
-		Database.Debug().AutoMigrate(&DB.UserGroup{},&DB.Cat{}, &DB.User{},&DB.Entry{}, &DB.History{}, &DB.Tag{}, &DB.Draft{})
+		DB.Db.Debug().AutoMigrate(&DB.UserGroup{},&DB.Cat{}, &DB.User{},&DB.Entry{}, &DB.History{}, &DB.Tag{}, &DB.Draft{})
 
 		span := opentracing.StartSpan("gormTracint")
 		defer span.Finish()
 
 		ctx := opentracing.ContextWithSpan(context.Background(), span)
 
-		session := Database.WithContext(ctx).Debug()
+		DB.Db = DB.Db.WithContext(ctx).Debug()
+
+		//DB.CreateEntry(DB.Db,&DB.Entry{
+		//	Model:     gorm.Model{},
+		//	Title:     "",
+		//	UserID:    0,
+		//	Lock:      false,
+		//	EditingBy: 0,
+		//	Tags:      nil,
+		//	CatID:     0,
+		//	History:   nil,
+		//	Content:   "",
+		//	Info:      "",
+		//})
+
+		//DB.CreateGroup(DB.Db,[]DB.UserGroup{
+		//	DB.UserGroup{
+		//		GroupName: "admin",
+		//		Level:     3,
+		//	},
+		//	DB.UserGroup{
+		//		GroupName: "anonymous",
+		//		Users:     nil,
+		//		Level:     0,
+		//	},
+		//})
 
 		r := gin.Default()
 
-		r.POST("/reg",)
+		r.GET("/reg", func(c *gin.Context) {
+			c.JSON(http.StatusOK,gin.H{
+				"hello":"world",
+			})
+		})
+		r.POST("/reg",v1.RegUserHandler)
 
+		r.GET("/Entry",v1.GETEntry)
+
+		r.Run()
 	}
 	return
 }

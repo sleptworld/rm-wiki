@@ -9,13 +9,13 @@ func EntryRouter(group *gin.RouterGroup)  {
 
 	// All Entry
 	group.GET("/Entry",v1.EntryHandler)
+	group.POST("/Entry")
 
 	eGroup := group.Group("/Entry")
 	{
 		// Single Entry api
-		singleEntry := "/:name"
+		singleEntry := "/:id"
 		eGroup.GET(singleEntry, v1.EntryHandler)
-		eGroup.POST(singleEntry)
 		eGroup.PUT(singleEntry)
 		eGroup.DELETE(singleEntry)
 		eGroup.PATCH(singleEntry)
@@ -23,7 +23,7 @@ func EntryRouter(group *gin.RouterGroup)  {
 		// Cat
 		cGroup := eGroup.Group("/cat")
 		{
-			catEntry := "/:name"
+			catEntry := "/:id"
 			cGroup.GET(catEntry)
 			cGroup.POST(catEntry)
 			cGroup.PUT(catEntry)
