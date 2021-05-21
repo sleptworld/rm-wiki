@@ -7,14 +7,14 @@ import (
 
 func UserRouter(group *gin.RouterGroup){
 	userSource := "/user"
-	group.POST(userSource,v1.RegUserHandler)
-	group.GET(userSource)
-	group.PATCH(userSource)
-	group.DELETE(userSource)
-}
 
-func TokenRouter(group *gin.RouterGroup){
-	tokenSource := "/token"
-	group.POST(tokenSource)
-	group.GET(tokenSource)
+	group.GET(userSource,v1.GETUser)
+	group.POST(userSource,v1.POSTUser)
+
+	uGroup := group.Group(userSource)
+	{
+		uGroup.GET("/:id",v1.GETUserByID)
+		uGroup.PATCH("/:id",v1.PATCHUserById)
+		uGroup.DELETE("/:id",v1.DELETEUserById)
+	}
 }

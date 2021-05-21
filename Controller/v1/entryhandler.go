@@ -3,6 +3,7 @@ package v1
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/sleptworld/test/DB"
+	"github.com/sleptworld/test/Model"
 	"net/http"
 	"strconv"
 )
@@ -13,7 +14,7 @@ type e struct {
 
 func GETEntry(c *gin.Context) {
 	limit := c.DefaultQuery("limit","10")
-	offset := c.Query("offset")
+	offset := c.DefaultQuery("offset","-1")
 	order := c.DefaultQuery("order","Title")
 
 	var res []DB.Entry
@@ -29,11 +30,11 @@ func GETEntry(c *gin.Context) {
 
 	if err1 == nil && err2 == nil {
 		if l <= 0 || l > 20 || o < -1 {
-			c.JSON(http.StatusOK, bad)
+			c.JSON(http.StatusBadRequest, bad)
 			return
 		}
 
-		DB.Db.Limit(l).Offset(o).Order(order).Find(&res)
+		DB.Db.Limit(l).Offset(o).Order(order).Preload("History").Preload("Tags").Find(&res)
 		c.JSON(http.StatusOK,gin.H{
 			"200":gin.H{
 				"data" : res,
@@ -43,7 +44,7 @@ func GETEntry(c *gin.Context) {
 		return
 
 	} else {
-		c.JSON(http.StatusOK,gin.H{
+		c.JSON(http.StatusBadRequest,gin.H{
 			"400":gin.H{
 				"error_code":"20002",
 				"error":"limit and offset must be interger.",
@@ -52,4 +53,63 @@ func GETEntry(c *gin.Context) {
 
 		return
 	}
+}
+
+func POSTEntry(c *gin.Context){
+	e := Model.NewEntry{}
+	c.BindJSON(&e)
+
+	if err := Model.EntryCheck(&e);err == nil{
+		c.JSON(http.StatusOK,gin.H{
+			"200":gin.H{
+				"msg":"OK",
+			},
+		})
+	} else {
+		c.JSON(http.StatusBadRequest,gin.H{
+			"400":gin.H{
+				"msg": err.Error(),
+			},
+		})
+	}
+}
+
+func GETEntryByID(c *gin.Context){
+	id := c.Param("ID")
+
+	e, _, err := DB.FindEntry(DB.Db, "id = ?", id, 1)
+
+	if err == nil{
+		c.JSON(http.StatusOK,gin.H{
+			"200":gin.H{
+				"data": e[0],
+			},
+		})
+	} else {
+		c.JSON(http.StatusBadRequest,gin.H{
+			"400":err.Error(),
+		})
+	}
+}
+
+func DELETEEntryByID(c *gin.Context)  {
+	id := c.Param("ID")
+	_, err := DB.DeleteEntry(DB.Db,"id = ?",id,1)
+	if err != nil {
+		c.JSON(http.StatusBadRequest,gin.H{
+			"400":err.Error(),
+		})
+	} else {
+		c.JSON(http.StatusOK,gin.H{
+			"200": "delete",
+		})
+	}
+}
+
+func PUTEntryByID(c *gin.Context)  {
+
+}
+
+func PATCHEntryByID(c *gin.Context){
+
 }

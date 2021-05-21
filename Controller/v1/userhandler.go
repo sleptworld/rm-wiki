@@ -7,13 +7,11 @@ import (
 	"net/http"
 )
 
-func UserHandler(c *gin.Context)  {
-	c.JSON(200, gin.H{
-		"message": "pong",
-	})
+func GETUser(c *gin.Context) {
+
 }
 
-func RegUserHandler(c *gin.Context){
+func POSTUser(c *gin.Context){
 	var regmodel Model.Reg
 	if c.BindJSON(&regmodel) == nil{
 		if r,err := Model.RegCheck(&regmodel,DB.Db);r{
@@ -29,4 +27,16 @@ func RegUserHandler(c *gin.Context){
 			})
 		}
 	}
+}
+
+func GETUserByID(c *gin.Context) {
+
+}
+
+func PATCHUserById(c *gin.Context){
+
+}
+
+func DELETEUserById(c *gin.Context){
+
 }

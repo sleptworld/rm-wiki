@@ -7,8 +7,8 @@ import (
 
 type Tag struct {
 	gorm.Model
-	Name    string   `gorm:"size:20"`
-	Entries []*Entry `gorm:"many2many:tag_entries"`
+	Name    string  `gorm:"size:20"`
+	Entries []Entry `gorm:"many2many:tag_entries"`
 }
 
 type Cat struct {
@@ -19,15 +19,14 @@ type Cat struct {
 
 type Entry struct {
 	gorm.Model
-	Title     string
-	UserID    uint `gorm:"<-:create"`
-	Lock      bool `gorm:"not null;default:false"`
-	EditingBy uint
-	Tags      []*Tag `gorm:"many2many:tag_entries"`
-	CatID     int32
-	History   []History
-	Content   string `gorm:"size:15000"`
-	Info      string `gorm:"default:Create;size:30"`
+	Title   string
+	UserID  uint  `gorm:"<-:create"`
+	Tags    []Tag `gorm:"many2many:tag_entries"`
+	CatID   int32
+	History []History
+	Content string `gorm:"size:15000"`
+	Info    string `gorm:"default:Create;size:30"`
+	IsDraft bool   `gorm:"default:false"`
 }
 
 type History struct {
@@ -38,11 +37,12 @@ type History struct {
 	Info    string `gorm:"default:Updated;size:30"`
 }
 
-type Draft struct {
-	gorm.Model
-	UserID  uint   `gorm:"<-:create"`
-	Content string `gorm:"size:15000"`
-}
+//type Draft struct {
+//	gorm.Model
+//	UserID  uint `gorm:"<-:create"`
+//	E       Entry
+//	EntryID uint
+//}
 
 type UserGroup struct {
 	gorm.Model
@@ -64,7 +64,6 @@ type User struct {
 	Language    string `gorm:"size:5"`
 	Entries     []Entry
 	EditEntries []History
-	Drafts      []Draft
 	Mechanism   string `gorm:"size:30"`
 	Sex         int8   `gorm:"check:Sex IN (0,1,2)"`
 	Profession  string `gorm:"size:30"`

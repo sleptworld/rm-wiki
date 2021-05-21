@@ -3,12 +3,11 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/opentracing/opentracing-go"
-	v1 "github.com/sleptworld/test/Controller/v1"
 	"github.com/sleptworld/test/DB"
+	"github.com/sleptworld/test/Router"
 	"golang.org/x/net/context"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"net/http"
 )
 
 func main() {
@@ -23,7 +22,7 @@ func main() {
 
 		_ = DB.Db.Use(&DB.OpentracingPlugin{})
 
-		DB.Db.Debug().AutoMigrate(&DB.UserGroup{},&DB.Cat{}, &DB.User{},&DB.Entry{}, &DB.History{}, &DB.Tag{}, &DB.Draft{})
+		DB.Db.Debug().AutoMigrate(&DB.UserGroup{},&DB.Cat{}, &DB.User{},&DB.Entry{}, &DB.History{}, &DB.Tag{})
 
 		span := opentracing.StartSpan("gormTracint")
 		defer span.Finish()
@@ -32,41 +31,13 @@ func main() {
 
 		DB.Db = DB.Db.WithContext(ctx).Debug()
 
-		//DB.CreateEntry(DB.Db,&DB.Entry{
-		//	Model:     gorm.Model{},
-		//	Title:     "",
-		//	UserID:    0,
-		//	Lock:      false,
-		//	EditingBy: 0,
-		//	Tags:      nil,
-		//	CatID:     0,
-		//	History:   nil,
-		//	Content:   "",
-		//	Info:      "",
-		//})
+		r := gin.New()
 
-		//DB.CreateGroup(DB.Db,[]DB.UserGroup{
-		//	DB.UserGroup{
-		//		GroupName: "admin",
-		//		Level:     3,
-		//	},
-		//	DB.UserGroup{
-		//		GroupName: "anonymous",
-		//		Users:     nil,
-		//		Level:     0,
-		//	},
-		//})
+		v1 := r.Group("/v1")
 
-		r := gin.Default()
-
-		r.GET("/reg", func(c *gin.Context) {
-			c.JSON(http.StatusOK,gin.H{
-				"hello":"world",
-			})
-		})
-		r.POST("/reg",v1.RegUserHandler)
-
-		r.GET("/Entry",v1.GETEntry)
+		Router.EntryRouter(v1)
+		Router.UserRouter(v1)
+		Router.TokenRouter(v1)
 
 		r.Run()
 	}

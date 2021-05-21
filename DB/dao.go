@@ -107,9 +107,10 @@ func UserForeignKey(db *gorm.DB,m map[string]interface{},condition string) ([]ma
 
 // Entry DB's Dao
 
-func CreateEntry(db *gorm.DB, entry *Entry){
+func CreateEntry(db *gorm.DB, entry *Entry) (int64,error){
 	// Title Only
-	db.Where(Entry{Title: entry.Title}).Session(&gorm.Session{FullSaveAssociations: true}).FirstOrCreate(entry)
+	res := db.Where(Entry{Title: entry.Title}).Session(&gorm.Session{FullSaveAssociations: true}).FirstOrCreate(entry)
+	return res.RowsAffected,res.Error
 }
 
 func FindEntry(db *gorm.DB, condition string,value string,number int)  ([]Entry,*gorm.DB,error){
@@ -179,9 +180,12 @@ func DropHistory(db *gorm.DB,condition string,value string,number int) (int64,er
 
 // Cat
 
-func CreateCat(db *gorm.DB,c *Cat) (int64,error){
-	res := db.Where("path = ?",c.Path).FirstOrCreate(c)
-	return res.RowsAffected,res.Error
+func CreateCat(db *gorm.DB,p string) (Cat,*gorm.DB) {
+	r := Cat{}
+	res := db.Where(Cat{
+		Path:    p,
+	}).FirstOrCreate(&r)
+	return r,res
 }
 
 func SearchCat(db *gorm.DB,condition string,value string) ([]Cat,error){

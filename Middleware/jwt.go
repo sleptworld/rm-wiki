@@ -20,8 +20,8 @@ type JWT struct {
 }
 
 type CustomClaims struct {
-	UserId string `json:"user_id"`
-	Email  string `json:"email"`
+	ID    uint   `json:"id"`
+	Email string `json:"email"`
 	jwt.StandardClaims
 }
 
@@ -100,7 +100,7 @@ func Jwt() gin.HandlerFunc {
 				return
 			}
 		}
-		context.Set("claims",claims)
+		context.Set("claims", claims)
 	}
 
 }
