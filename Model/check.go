@@ -14,18 +14,19 @@ func LoginCheck(l *Login, db *gorm.DB) (Middleware.CustomClaims,bool) {
 	if l.Email == "" || l.Pwd == ""{
 		return r,false
 	}
-	user, _, err := DB.FindUser(db, "Email = ?", l.Email, 1)
+	var user DB.User
+	h := DB.FindUser(db, "Email = ?", l.Email, 1,&user)
 
-	if err != nil {
+	if h.Error != nil {
 		return r,false
 	} else {
-		d := (user[0]["pwd"]).([]byte)
+		d := user.Pwd
 		err := tools.PwdConfirm(l.Pwd, d, Config.AesKey)
 		if err != nil {
 			return r,false
 		} else {
-			r.ID = (user[0]["id"]).(uint)
-			r.Email = (user[0]["email"]).(string)
+			r.ID = user.ID
+			r.Email = user.Email
 
 			return r,true
 		}
@@ -43,18 +44,18 @@ func RegCheck(r *Reg, db *gorm.DB) (bool, error) {
 		Entries:     nil,
 		EditEntries: nil,
 		Sex:         r.Sex,
-		Profession:  r.Profesion,
+		Profession:  r.Profession,
 	}
 	DB.UserPretreatment(&r_u, r.Pwd)
 
-	_, err := DB.RegisterUser(db, &r_u)
+	_, err := DB.RegisterUser(db, &r_u,&DB.User{})
 	if err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
-func EntryCheck(e *NewEntry) error {
+func EntryCheck(e *NewEntry,res interface{}) error {
 	rE := DB.Entry{
 		Title: e.Title,
 		UserID: e.Author,
@@ -63,15 +64,16 @@ func EntryCheck(e *NewEntry) error {
 		Info: e.Info,
 	}
 
-	if r,err := DB.CatCheck(e.Cat);err == nil{
-		rE.CatID = r.ID
-		_, err := DB.CreateEntry(DB.Db,&rE)
+	result := Cat{}
+	if r := DB.CatCheck(e.Cat,&result);r.Error == nil{
+		rE.CatID = result.ID
+		_, err := DB.CreateEntry(DB.Db,&rE,res)
 		if err != nil {
 			return err
 		}
 		return nil
 	} else {
-		return err
+		return r.Error
 	}
 
 }

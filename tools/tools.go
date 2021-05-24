@@ -9,6 +9,7 @@ import (
 	"github.com/goinggo/mapstructure"
 	"golang.org/x/crypto/bcrypt"
 	"os"
+	"regexp"
 )
 
 func mapToStruct(m map[string]interface{},s interface{}) (error){
@@ -111,4 +112,16 @@ func PKCS7Padding(ciphertext []byte, blockSize int) []byte {
 	padding := blockSize - len(ciphertext)%blockSize
 	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
 	return append(ciphertext, padtext...)
+}
+
+func StringTypeCheck(p string, t string) bool {
+	switch t {
+	case "Num":
+		pattern := "\\d+"
+		result,_ := regexp.MatchString(pattern,p)
+		return result
+	default:
+		return false
+	}
+
 }

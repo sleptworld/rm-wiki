@@ -17,16 +17,26 @@ type Cat struct {
 	Entries []Entry `gorm:"foreignKey:CatID"`
 }
 
+type Lang struct {
+	ID      int8    `gorm:"primaryKey;autoIncrement"`
+	Lang    string  `gorm:"size:5;uniqueIndex"`
+	Entries []Entry `gorm:"foreignKey:LangID"`
+}
+
 type Entry struct {
+	// gorm Model
 	gorm.Model
-	Title   string
-	UserID  uint  `gorm:"<-:create"`
-	Tags    []Tag `gorm:"many2many:tag_entries"`
-	CatID   int32
-	History []History
+	//
+	Title   string `gorm:"size:30;<-:create;not null;check:title <> '';unique"`
 	Content string `gorm:"size:15000"`
 	Info    string `gorm:"default:Create;size:30"`
-	IsDraft bool   `gorm:"default:false"`
+	// one2many
+	Tags    []Tag `gorm:"many2many:tag_entries"`
+	History []History
+	// ForeignKey
+	LangID int8  `gorm:"default:1"`
+	UserID uint  `gorm:"<-:create"`
+	CatID  int32 `gorm:"not null;default:1"`
 }
 
 type History struct {
@@ -37,16 +47,16 @@ type History struct {
 	Info    string `gorm:"default:Updated;size:30"`
 }
 
-//type Draft struct {
-//	gorm.Model
-//	UserID  uint `gorm:"<-:create"`
-//	E       Entry
-//	EntryID uint
-//}
+type Draft struct {
+	gorm.Model
+	UserID  uint `gorm:"<-:create"`
+	Title   string
+	Content string `gorm:"size:15000"`
+}
 
 type UserGroup struct {
 	gorm.Model
-	GroupName string
+	GroupName string `gorm:"size:10"`
 	Users     []User
 	Level     int8 `gorm:"not null"`
 }
@@ -64,6 +74,7 @@ type User struct {
 	Language    string `gorm:"size:5"`
 	Entries     []Entry
 	EditEntries []History
+	Drafts      []Draft
 	Mechanism   string `gorm:"size:30"`
 	Sex         int8   `gorm:"check:Sex IN (0,1,2)"`
 	Profession  string `gorm:"size:30"`

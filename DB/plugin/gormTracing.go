@@ -1,4 +1,4 @@
-package DB
+package plugin
 
 import (
 	"fmt"
@@ -48,7 +48,7 @@ func (op *OpentracingPlugin) Name() string{
 }
 
 func (op *OpentracingPlugin) Initialize(db *gorm.DB) (err error){
-	db.Callback().Create().Before("gorm:before_create").Register(callBackBeforeName,before)
+	db.Callback().Create().Before("gorm:before_create").Register(callBackBeforeName, before)
 	db.Callback().Query().Before("gorm:query").Register(callBackBeforeName, before)
 	db.Callback().Delete().Before("gorm:before_delete").Register(callBackBeforeName, before)
 	db.Callback().Update().Before("gorm:setup_reflect_value").Register(callBackBeforeName, before)

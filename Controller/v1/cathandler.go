@@ -4,7 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sleptworld/test/DB"
 	"net/http"
-	"strconv"
 )
 
 type AllCat struct {
@@ -13,49 +12,37 @@ type AllCat struct {
 }
 
 func GETCat(c *gin.Context) {
-	limit := c.DefaultQuery("limit", "10")
-	offset := c.DefaultQuery("offset", "-1")
-	order := c.DefaultQuery("order", "path")
-
 	var res []AllCat
 
-	l, err1 := strconv.Atoi(limit)
-	o, err2 := strconv.Atoi(offset)
-
-	if err1 == nil && err2 == nil {
-		if l < 0 || l > 20 || o < -1 {
-			return
-		}
-		if r := DB.Db.Model(&DB.Cat{}).Limit(l).Offset(o).Order(order).Find(&res);r.Error == nil{
-			c.JSON(http.StatusOK,gin.H{
-				"data" : res,
-			})
-		} else {
-			c.JSON(http.StatusBadRequest,gin.H{
-				"err":"err",
-			})
-		}
-		} else {
-		c.JSON(http.StatusBadRequest,gin.H{
-			"err":"err",
+	_,_,err := common(c,DB.Db.Model(&DB.Cat{}),"path",[]string{},&res)
+	if err != nil {
+		c.JSON(http.StatusOK,gin.H{
+			"error" : err.Error(),
+		})
+	} else {
+		c.JSON(http.StatusOK,gin.H{
+			"data":res,
 		})
 	}
+
 }
 
+func POSTCat(c *gin.Context){}
+
 func GETCatByID(c *gin.Context){
+
+	var result []DB.Cat
 	id := c.Param("id")
+	pre := DB.Db.Model(&DB.Cat{}).Where("id = ?",id).Preload("Entries")
+	_,_,err := common(c,pre,"path",[]string{},&result)
 
-	l := c.DefaultQuery("limit","10")
-	of := c.DefaultQuery("offset","1")
-	order := c.DefaultQuery("order","path")
-
-	limit,err1 := strconv.Atoi(l)
-	offset,err2 := strconv.Atoi(of)
-
-	if err1 == nil && err2 == nil {
-		if limit < 0 || offset < -1 {
-			return
-		}
-
+	if err == nil{
+		c.JSON(http.StatusOK,gin.H{
+			"data" : result,
+		})
+	} else {
+		c.JSON(http.StatusBadGateway,gin.H{
+			"err":err.Error(),
+		})
 	}
 }

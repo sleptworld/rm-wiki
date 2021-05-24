@@ -16,43 +16,42 @@ type Dao interface {
 
 // Tools for search
 
-func search (db *gorm.DB,query string,value string,number int) ([]map[string]interface{},*gorm.DB,error){
+func search (db *gorm.DB,query string,value string,number int,res interface{}) *gorm.DB{
 	var r *gorm.DB
 	r = db.Where(query,value)
 	if r.Error == nil{
-		result := map[string]interface{}{}
-		var results []map[string]interface{}
 		switch number {
 		case 0:
-			r.Take(&result)
+			r.Take(res)
 		case -1:
-			r.Last(&result)
+			r.Last(res)
 		case 1:
-			r.First(&result)
+			r.First(res)
 		default:
-			r.Find(&results)
-			return results,r,nil
+			r.Find(res)
 		}
 
-		last := []map[string]interface{}{result}
-		return last,r,nil
+		return r
+
 	} else {
-		return nil,nil,r.Error
+		return nil
 	}
 }
 
 // User DB's Dao
 
-func RegisterUser(db *gorm.DB,user *User) (int64,error) {
+func RegisterUser(db *gorm.DB,user *User,res interface{}) (int64,error) {
 	// Email only
-	res := db.Create(user)
-	return res.RowsAffected,res.Error
+	result := db.Where(User{Email:user.Email}).FirstOrCreate(user)
+	FindUser(db,"email = ?",user.Email,1,res)
+	return result.RowsAffected,result.Error
 }
 
 func UpdateUser(db *gorm.DB,query string,value string,number int,user *User) (int64,error) {
-	_,h,err := FindUser(db,query,value,number)
-	if err == nil{
-		if res := h.Updates(user); res.Error != nil{
+
+	r := FindUser(db,query,value,number,&User{})
+	if r.Error == nil{
+		if res := r.Updates(user); res.Error != nil{
 			return 0,res.Error
 		} else {
 			return res.RowsAffected,nil
@@ -63,11 +62,8 @@ func UpdateUser(db *gorm.DB,query string,value string,number int,user *User) (in
 }
 
 func DeleteUser(db *gorm.DB, condition string, value string, number int) (int64,error) {
-	ans,r,err := FindUser(db,condition,value,number)
-	if ans == nil {
-		return 0, errors.New("No valid user")
-	}
-	if err == nil{
+	r := FindUser(db,condition,value,number,&User{})
+	if r.Error == nil{
 		result := r.Delete(&User{})
 		if result.Error != nil{
 			return 0,result.Error
@@ -75,14 +71,14 @@ func DeleteUser(db *gorm.DB, condition string, value string, number int) (int64,
 			return result.RowsAffected,nil
 		}
 	} else {
-		return 0,err
+		return 0,r.Error
 	}
 }
 
-func FindUser(db *gorm.DB, query string, value string, number int) ([]map[string]interface{},*gorm.DB,error){
+func FindUser(db *gorm.DB, query string, value string, number int,res interface{}) *gorm.DB{
 	m := db.Model(&User{})
-	rs,r,err := search(m,query,value,number)
-	return rs,r,err
+	result := search(m,query,value,number,res)
+	return result
 }
 
 func UserForeignKey(db *gorm.DB,m map[string]interface{},condition string) ([]map[string]interface{},error){
@@ -107,91 +103,86 @@ func UserForeignKey(db *gorm.DB,m map[string]interface{},condition string) ([]ma
 
 // Entry DB's Dao
 
-func CreateEntry(db *gorm.DB, entry *Entry) (int64,error){
+func CreateEntry(db *gorm.DB, entry *Entry,res interface{}) (int64,error){
 	// Title Only
-	res := db.Where(Entry{Title: entry.Title}).Session(&gorm.Session{FullSaveAssociations: true}).FirstOrCreate(entry)
-	return res.RowsAffected,res.Error
+	result := db.Create(entry)
+
+	FindEntry(db,"title = ?",entry.Title,1,res)
+
+	return result.RowsAffected,result.Error
 }
 
-func FindEntry(db *gorm.DB, condition string,value string,number int)  ([]Entry,*gorm.DB,error){
-	var result []Entry
-	if r := db.Where(condition,value);r.Error == nil{
-		singleEntry := Entry{}
-		var lotsOfEntry []Entry
-		switch number {
-		case 1:
-			r.First(&singleEntry)
-			db.Model(&singleEntry).Preload("History").Find(&result)
-		case 0:
-			r.Find(&lotsOfEntry)
-			db.Model(&lotsOfEntry).Preload("History").Find(&result)
-		default:
-			return nil,r,errors.New("wrong")
-		}
-		return result,r,nil
-	} else {
-		return nil,r,r.Error
-	}
+func FindEntry(db *gorm.DB, condition string,value string,number int,res interface{})  *gorm.DB{
+	result := search(db.Model(&Entry{}),condition,value,number,res)
+	return result
 }
 
 func UpdateEntry(db *gorm.DB,m *Entry,userid uint){
-	db.Transaction(func(tx *gorm.DB) error{
-		_, err := CreateHistory(tx,m,userid)
+	err := db.Transaction(func(tx *gorm.DB) error {
+		_, err := CreateHistory(tx, m, userid,&History{})
 		if err != nil {
 			return err
 		}
 		res := tx.Model(m).Updates(m)
 		return res.Error
 	})
+	if err != nil {
+		return 
+	}
 }
 func DeleteEntry(db *gorm.DB,condition string,value string,number int)  (int64,error){
-	_,h,err := FindEntry(db,condition,value,number)
-	if err == nil{
-		result := h.Delete(&Entry{})
+	res := FindEntry(db,condition,value,number,&Entry{})
+	if res.Error == nil{
+		result := res.Delete(&Entry{})
 		return result.RowsAffected,nil
 	} else {
-		return 0,err
+		return 0,res.Error
 	}
 }
 
 // History
 
-func CreateHistory(db *gorm.DB,e *Entry,userid uint) (int64,error){
-	res := db.Create(&History{
+func CreateHistory(db *gorm.DB,e *Entry,userid uint,res interface{}) (int64,error){
+	result := db.Create(&History{
 		EntryID: e.ID,
 		UserID:  userid,
 		Content: e.Content,
 	})
 
-	return res.RowsAffected,res.Error
+	FindHistory(db,"Content = ?",e.Content,1,res)
+	return result.RowsAffected,result.Error
+}
+
+func FindHistory(db *gorm.DB,condition string,value string,number int,res interface{}) *gorm.DB{
+	result := search(db.Model(&History{}),condition,value,number,res)
+
+	return result
 }
 
 func DropHistory(db *gorm.DB,condition string,value string,number int) (int64,error){
-	m := db.Model(&History{})
-	_,h,err := search(m,condition,value,number)
 
-	if err != nil{
-		return 0,err
+	result := FindHistory(db,condition,value,number,&History{})
+
+	if result.Error != nil{
+		return 0,result.Error
 	} else {
-		result := h.Delete(&History{})
+		result := result.Delete(&History{})
 		return result.RowsAffected,result.Error
 	}
 }
 
 // Cat
 
-func CreateCat(db *gorm.DB,p string) (Cat,*gorm.DB) {
-	r := Cat{}
-	res := db.Where(Cat{
-		Path:    p,
-	}).FirstOrCreate(&r)
-	return r,res
+func CreateCat(db *gorm.DB,p string,r interface{}) *gorm.DB {
+
+	res := db.FirstOrCreate(&Cat{Path: p})
+	SearchCat(db,"path = ?",p,r)
+	return res
 }
 
-func SearchCat(db *gorm.DB,condition string,value string) ([]Cat,error){
-	var res []Cat
-	result := db.Where(condition,value).Find(&res)
-	return res,result.Error
+func SearchCat(db *gorm.DB,condition string,value string,res interface{}) *gorm.DB{
+	result := search(db.Model(&Cat{}),condition,value,2,res)
+	return result
 }
 
 func CatNode(db *gorm.DB,catNode string)  (Cat,error){
@@ -200,33 +191,39 @@ func CatNode(db *gorm.DB,catNode string)  (Cat,error){
 	return res,result.Error
 }
 
-func CatChildren(db *gorm.DB,catNode string) ([]Cat,error){
-	res,err := SearchCat(db,"path ~ ?",catNode+".*{1}")
-	return res,err
+func CatChildren(db *gorm.DB,catNode string,res interface{}) *gorm.DB{
+	result := SearchCat(db,"path ~ ?",catNode+".*{1}",res)
+	return result
 }
 
-func CatFind(db *gorm.DB,catNode string) ([]Cat,error){
-	res,err := SearchCat(db,"path <@ ?",catNode)
-	return res, err
+func FindCat(db *gorm.DB,catNode string,res interface{}) *gorm.DB{
+	result := SearchCat(db,"path <@ ?",catNode,res)
+	return result
 }
 
-func CatParent(db *gorm.DB,catNode string) ([]Cat,error)  {
-	res,err := SearchCat(db,"path ~ ?","*{1}."+catNode)
-	comma := strings.Index(res[0].Path,".")
-	p := res[0].Path[0:comma]
-	res,err = SearchCat(db,"path ~ ?",p)
-	return res,err
-}
+func CatParent(db *gorm.DB,catNode string,res interface{})  *gorm.DB {
+	var result []Cat
+	h := SearchCat(db,"path ~ ?","*{1}."+catNode,&result)
 
-func CatBrother(db *gorm.DB,catNode string) ([]Cat,error){
-	if p,err := CatParent(db,catNode);err == nil{
-		parent := p[0].Path
-		p,err = SearchCat(db,"path ~ ?",parent+"."+"!"+catNode+"{1}")
-
-		return p,err
-	} else {
-		return p,err
+	if h.Error != nil{
+		return h
 	}
+
+	comma := strings.Index(result[0].Path,".")
+	p := result[0].Path[0:comma]
+	h = SearchCat(db,"path ~ ?",p,res)
+	return h
+}
+
+func CatBrother(db *gorm.DB,catNode string,res interface{}) *gorm.DB{
+	var p []Cat
+	h := CatParent(db,catNode,&p)
+	if h.Error != nil{
+		return h
+	}
+		parent := p[0].Path
+		h = SearchCat(db,"path ~ ?",parent+"."+"!"+catNode+"{1}",&res)
+		return h
 }
 
 func Cat2Entries(db *gorm.DB,c *Cat) ([]Entry,error){
