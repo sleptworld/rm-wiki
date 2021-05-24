@@ -34,35 +34,32 @@ func LoginCheck(l *Login, db *gorm.DB) (Middleware.CustomClaims,bool) {
 	}
 }
 
-func RegCheck(r *Reg, db *gorm.DB) (bool, error) {
+func RegCheck(r *Reg,res interface{})  (int64,error) {
 	r_u := DB.User{
 		Name:        r.Name,
 		Email:       r.Email,
 		UserGroupID: 1,
 		Country:     r.Country,
 		Language:    r.Language,
-		Entries:     nil,
-		EditEntries: nil,
 		Sex:         r.Sex,
 		Profession:  r.Profession,
 	}
 	DB.UserPretreatment(&r_u, r.Pwd)
 
-	_, err := DB.RegisterUser(db, &r_u,&DB.User{})
-	if err != nil {
-		return false, err
-	}
-	return true, nil
+	l, err := DB.RegisterUser(DB.Db, &r_u,res)
+	return l,err
 }
 
-func EntryCheck(e *NewEntry,res interface{}) error {
+func EntryCheck(e *NewEntry,id uint,rev bool,res interface{}) error {
 	rE := DB.Entry{
 		Title: e.Title,
-		UserID: e.Author,
+		UserID: id,
 		Content: e.Content,
 		Tags: DB.Tags2Entry(e.Tags),
+		Review: rev,
 		Info: e.Info,
 	}
+
 
 	result := Cat{}
 	if r := DB.CatCheck(e.Cat,&result);r.Error == nil{

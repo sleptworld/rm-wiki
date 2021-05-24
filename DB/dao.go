@@ -16,7 +16,7 @@ type Dao interface {
 
 // Tools for search
 
-func search (db *gorm.DB,query string,value string,number int,res interface{}) *gorm.DB{
+func search (db *gorm.DB,query string,value interface{},number int,res interface{}) *gorm.DB{
 	var r *gorm.DB
 	r = db.Where(query,value)
 	if r.Error == nil{
@@ -75,7 +75,7 @@ func DeleteUser(db *gorm.DB, condition string, value string, number int) (int64,
 	}
 }
 
-func FindUser(db *gorm.DB, query string, value string, number int,res interface{}) *gorm.DB{
+func FindUser(db *gorm.DB, query string, value interface{}, number int,res interface{}) *gorm.DB{
 	m := db.Model(&User{})
 	result := search(m,query,value,number,res)
 	return result

@@ -5,9 +5,9 @@ import (
 	"github.com/sleptworld/test/Config"
 	"github.com/sleptworld/test/DB"
 	"github.com/sleptworld/test/Model"
-	"github.com/sleptworld/test/tools"
 	"gorm.io/gorm"
 	"net/http"
+	"strconv"
 )
 
 type e struct {
@@ -45,18 +45,11 @@ func GETEntry(c *gin.Context) {
 }
 
 func POSTEntry(c *gin.Context) {
+
+	l,uid := Claims2Level(c)
+
 	e := Model.NewEntry{}
 	err := c.BindJSON(&e)
-
-	if e.Title == ""{
-		c.JSON(http.StatusBadRequest,Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
-			"Message":Config.MsgBodyValueMissing,
-			"Reason":Config.ErrBodyValueMissing,
-		},0,nil))
-
-		return
-	}
-
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest, Config.ApiVersion, map[string]string{
 			"Message":Config.ErrBodyFormat,
@@ -65,10 +58,20 @@ func POSTEntry(c *gin.Context) {
 		return
 	}
 
-	originResult := DB.Entry{}
-	if err := Model.EntryCheck(&e, &originResult); err == nil {
+	var oresult DB.Entry
+
+	var policy bool
+
+	switch l {
+	case 3:
+		policy = false
+	default:
+		policy = true
+	}
+
+	if err := Model.EntryCheck(&e,uid,policy,&oresult);err == nil{
 		result := Model.SingleEntry{}
-		Model.Entry2Entry(&originResult, &result)
+		Model.Entry2Entry(&oresult, &result)
 		c.JSON(http.StatusOK, Model.Api(http.StatusOK, Config.ApiVersion, nil, 1, result))
 	} else {
 		code,msg := DB.CheckErrors(err)
@@ -81,54 +84,68 @@ func POSTEntry(c *gin.Context) {
 
 func GETEntryByID(c *gin.Context) {
 	id := c.Param("id")
-	if !tools.StringTypeCheck(id, "Num") {
-		c.JSON(http.StatusBadRequest, Model.Api(
-			http.StatusBadRequest, Config.ApiVersion,
-			map[string]string{
-				"Message": Config.MsgValueFormatForID,
-				"Reason":  Config.ErrValueFormat,
-			}, 0, nil))
-		return
-	}
-	var res DB.Entry
-	r := DB.FindEntry(DB.Db.Preload("Tags").Preload("History"),
-		"id = ?", id, 1, &res)
 
-	if r.Error == nil {
-		result := Model.SingleEntry{}
-		Model.Entry2Entry(&res, &result)
-		c.JSON(http.StatusOK, Model.Api(http.StatusOK, Config.ApiVersion, nil, int(r.RowsAffected), result))
-	} else {
-		errCode,errMessage := DB.CheckErrors(r.Error)
-		c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
-			"Message":errMessage,
-			"Reason":errCode,
-		},0,nil))
-		return
-	}
+	CheckParamType(c,id,"Num", func(c *gin.Context) {
+		var res DB.Entry
+		r := DB.FindEntry(DB.Db.Preload("Tags").Preload("History"),
+			"id = ?", id, 1, &res)
+
+		if r.Error == nil {
+			result := Model.SingleEntry{}
+			Model.Entry2Entry(&res, &result)
+			c.JSON(http.StatusOK, Model.Api(http.StatusOK, Config.ApiVersion, nil, int(r.RowsAffected), result))
+		} else {
+			errCode,errMessage := DB.CheckErrors(r.Error)
+			c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
+				"Message":errMessage,
+				"Reason":errCode,
+			},0,nil))
+			return
+		}
+	})
 }
 
 func DELETEEntryByID(c *gin.Context) {
-	id := c.Param("ID")
-	_, err := DB.DeleteEntry(DB.Db, "id = ?", id, 1)
-	if err != nil {
-		code,msg := DB.CheckErrors(err)
-		c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
-			"Message":msg,
-			"Reason":code,
-		},0,nil))
-		return
-	} else {
-		c.JSON(http.StatusOK, gin.H{
-			"msg": "Have deleted.",
-		})
-	}
-}
+	id := c.Param("id")
 
-func PUTEntryByID(c *gin.Context) {
+	CheckParamType(c,id,"Num", func(c *gin.Context) {
 
+		var entry DB.Entry
+		if r:= DB.FindEntry(DB.Db,"id = ?",id,1,&entry);r.Error==nil{
+			IDorGroupCheck(c,3,entry.UserID, func(c *gin.Context) {
+				if l,err := DB.DeleteEntry(DB.Db,"id = ?",id,1);err == nil{
+					c.JSON(http.StatusOK,Model.Api(http.StatusOK,Config.ApiVersion,nil,int(l),entry))
+					return
+				} else {
+					code,msg := DB.CheckErrors(err)
+					c.JSON(http.StatusBadRequest,Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
+						"Message":msg,
+						"Reason":code,
+					},0,nil))
+					return
+				}
+			})
+		} else {
+			c.JSON(http.StatusBadRequest,Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
+				"Message" : Config.MsgNoValueForID,
+				"Reason" : Config.ErrValueFormat,
+			},0,nil))
+		}
+	})
 }
 
 func PATCHEntryByID(c *gin.Context) {
+	l,uid := Claims2Level(c)
+	
+	i := strconv.Itoa(int(uid))
+	IDorGroupCheck(c,3,i, func(c *gin.Context) {
+		up := Model.UpdateEntry{}
+		err := c.BindJSON(&up)
+		if err != nil {
+			return
+		}
+		res := Model.EntryUpdate2Entry(&up)
+		DB.UpdateEntry(DB.Db,&res,uid)
+	})
 
 }

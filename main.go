@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/gin-gonic/gin"
 	"github.com/sleptworld/test/DB"
+	"github.com/sleptworld/test/Middleware"
 	"github.com/sleptworld/test/Router"
 )
 
@@ -16,6 +17,7 @@ func main() {
 			return
 		}
 		r := gin.New()
+		r.Use(gin.Logger(),Middleware.Jwt(),gin.Recovery())
 		v1 := r.Group("v1")
 
 		Router.EntryRouter(v1)

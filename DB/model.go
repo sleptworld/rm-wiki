@@ -7,7 +7,7 @@ import (
 
 type Tag struct {
 	gorm.Model
-	Name    string  `gorm:"size:20"`
+	Name    string  `gorm:"size:20;unique"`
 	Entries []Entry `gorm:"many2many:tag_entries"`
 }
 
@@ -30,6 +30,7 @@ type Entry struct {
 	Title   string `gorm:"size:30;<-:create;not null;check:title <> '';unique"`
 	Content string `gorm:"size:15000"`
 	Info    string `gorm:"default:Create;size:30"`
+	Review  bool   `gorm:"default:false;not null"`
 	// one2many
 	Tags    []Tag `gorm:"many2many:tag_entries"`
 	History []History

@@ -20,4 +20,7 @@ const (
 
 	ErrWrongData = "30000"
 	MsgWrongData = "Wrong format data."
+
+	ErrUnauthorized = "40001"
+	MsgUnauthorized = "You don't have enough permissions"
 )
