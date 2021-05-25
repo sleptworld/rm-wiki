@@ -23,4 +23,13 @@ const (
 
 	ErrUnauthorized = "40001"
 	MsgUnauthorized = "You don't have enough permissions"
+
+	// Level
+
+	AdminLevel = 3
+
+	// Const
+
+	AnonymousID = 1
 )
+

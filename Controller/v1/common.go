@@ -14,53 +14,100 @@ import (
 )
 
 type au func(c *gin.Context)
+type ac func(c *gin.Context, id uint, level DB.Level)
 
-func common(c *gin.Context,tx *gorm.DB,order string,preloads []string,res interface{}) (int,map[string]string,error) {
+type access struct {
+	idAccess           bool
+	id                 uint
+	MinimumPermissions DB.Level
 
-	l := c.DefaultQuery("limit","10")
-	of := c.DefaultQuery("offset","-1")
-	or := c.DefaultQuery("order",order)
-	la := c.DefaultQuery("lang","zh")
+	handlers map[DB.Level]ac
+}
 
-	limit,err1 := strconv.Atoi(l)
-	offset,err2 := strconv.Atoi(of)
+func (a *access) policy(c *gin.Context) {
+
+	l, id := Claims2Level(c)
+
+	if l == Config.AdminLevel {
+		(a.handlers[Config.AdminLevel])(c, id, l)
+		return
+	}
+
+	if a.idAccess{
+		if id == a.id{
+			var p ac
+			h, ok := a.handlers[0]
+			if ok {
+				p = h
+			} else {
+				h, ok = a.handlers[l]
+				if ok {
+					p = h
+				}
+			}
+			p = a.handlers[a.MinimumPermissions]
+			p(c,id,l)
+			return
+		}
+	}
+
+	p, ok := a.handlers[l]
+	if ok {
+		p(c, id, l)
+		return
+	}
+	checkTemplate(l >= a.MinimumPermissions, c, id, l, a.handlers[a.MinimumPermissions])
+	return
+}
+
+// tool functions
+
+func common(c *gin.Context, tx *gorm.DB, order string, preloads []string, res interface{}) (int, map[string]string, error) {
+
+	l := c.DefaultQuery("limit", "10")
+	of := c.DefaultQuery("offset", "-1")
+	or := c.DefaultQuery("order", order)
+	la := c.DefaultQuery("lang", "zh")
+
+	limit, err1 := strconv.Atoi(l)
+	offset, err2 := strconv.Atoi(of)
 
 	if err1 == nil && err2 == nil {
 		if limit < 0 || offset < -1 {
-			return 0,nil,errors.New("wrong")
+			return 0, nil, errors.New("wrong")
 		}
 
 		temp := tx.Limit(limit).Offset(offset).Order(or)
 
-		for _,preload := range preloads{
+		for _, preload := range preloads {
 			temp = temp.Preload(preload)
 		}
 
 		rsss := temp.Find(res)
 
-		if rsss.Error != nil{
-			return 0,nil,rsss.Error
+		if rsss.Error != nil {
+			return 0, nil, rsss.Error
 		}
 
 		p := map[string]string{
-			"limit" : l,
-			"offset" : of,
-			"order" : or,
-			"lang" : la,
+			"limit":  l,
+			"offset": of,
+			"order":  or,
+			"lang":   la,
 		}
 
-		return int(rsss.RowsAffected),p,nil
+		return int(rsss.RowsAffected), p, nil
 
 	} else {
-		return 0,nil,errors.New("wrong format")
+		return 0, nil, errors.New("wrong format")
 	}
 }
 
-func Authentication(c *gin.Context,level int8) bool{
+func Authentication(c *gin.Context, level DB.Level) bool {
 
-	cl,exist := c.Get("claims")
+	cl, exist := c.Get("claims")
 
-	if exist{
+	if exist {
 
 		customClaims := cl.(*Middleware.CustomClaims)
 
@@ -74,16 +121,16 @@ func Authentication(c *gin.Context,level int8) bool{
 		}
 
 		type ll struct {
-			Level int8
+			Level DB.Level
 		}
 
 		var u g
 		var l ll
 
-		DB.FindUser(DB.Db,"id = ? AND email = "+ "'"+email+"'",userId,1, &u)
-		DB.Db.Model(&DB.UserGroup{}).Where("id = ?",u.UserGroupID).First(&l)
+		DB.FindUser(DB.Db, "id = ? AND email = "+"'"+email+"'", userId, 1, &u)
+		DB.Db.Model(&DB.UserGroup{}).Where("id = ?", u.UserGroupID).First(&l)
 
-		if l.Level >= level{
+		if l.Level >= level {
 			return true
 		}
 	}
@@ -91,12 +138,12 @@ func Authentication(c *gin.Context,level int8) bool{
 	return 0 > level
 }
 
-func CheckByID(c *gin.Context,id uint) bool  {
+func CheckByID(c *gin.Context, id uint) bool {
 	var claims *Middleware.CustomClaims
-	if cl,exist := c.Get("claims");exist{
+	if cl, exist := c.Get("claims"); exist {
 		claims = cl.(*Middleware.CustomClaims)
 
-		if claims.ID == id{
+		if claims.ID == id {
 			return true
 		}
 	}
@@ -105,44 +152,61 @@ func CheckByID(c *gin.Context,id uint) bool  {
 
 }
 
-func IDorGroupCheck(c *gin.Context,level int8,id uint,handler au){
-	if Authentication(c,level) || CheckByID(c,id) {
-		handler(c)
+func checkTemplate(ok bool, c *gin.Context, id uint, level DB.Level, handler ac) {
+
+	if ok {
+		(handler)(c, id, level)
 	} else {
-		c.JSON(http.StatusUnauthorized,Model.Api(http.StatusUnauthorized,Config.ApiVersion, map[string]string{
-			"Message":Config.ErrUnauthorized,
-			"Reason":Config.ErrUnauthorized,
-		},0,nil))
+		c.JSON(http.StatusUnauthorized, Model.Api(http.StatusUnauthorized, Config.ApiVersion, map[string]string{
+			"Message": Config.MsgUnauthorized,
+			"Reason":  Config.ErrUnauthorized,
+		}, 0, nil))
 		return
 	}
 }
 
-func CheckParamType(c *gin.Context,p string,t string,h au)  {
-	if tools.StringTypeCheck(p,t){
-		h(c)
+func aucheckTemplate(ok bool, c *gin.Context, handler au) {
+	if ok {
+		(handler)(c)
 	} else {
-		c.JSON(http.StatusBadRequest,Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
-			"Message":Config.MsgValueFormatForID,
-			"Reason":Config.ErrValueFormat,
-		},0,nil))
+		c.JSON(http.StatusUnauthorized, Model.Api(http.StatusUnauthorized, Config.ApiVersion, map[string]string{
+			"Message": Config.ErrUnauthorized,
+			"Reason":  Config.ErrUnauthorized,
+		}, 0, nil))
+		return
 	}
 }
 
-func Claims2Level(c *gin.Context) (int8,uint) {
+func IDorGroupCheck(c *gin.Context, level DB.Level, id uint, handler au) {
+	aucheckTemplate(Authentication(c, level) || CheckByID(c, id), c, handler)
+}
 
-	cl,exist := c.Get("claims")
-	if !exist{
-		return 0,1
+func CheckParamType(c *gin.Context, p string, t string, h au) {
+	if tools.StringTypeCheck(p, t) {
+		h(c)
+	} else {
+		c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest, Config.ApiVersion, map[string]string{
+			"Message": Config.MsgValueFormatForID,
+			"Reason":  Config.ErrValueFormat,
+		}, 0, nil))
+	}
+}
+
+func Claims2Level(c *gin.Context) (DB.Level, uint) {
+
+	cl, exist := c.Get("claims")
+	if !exist {
+		return 0, 1
 	}
 
 	claims := cl.(*Middleware.CustomClaims)
 	var user DB.User
 	var group DB.UserGroup
 
-	r := DB.FindUser(DB.Db,"id = ?",(*claims).ID,1,&user)
-	if r.Error != nil{
-		return  0,1
+	r := DB.FindUser(DB.Db, "id = ?", (*claims).ID, 1, &user)
+	if r.Error != nil {
+		return 0, 1
 	}
-	DB.Db.Model(&DB.UserGroup{}).Select("Level").Where("id = ?",user.UserGroupID).First(&group)
-	return group.Level,(*claims).ID
+	DB.Db.Model(&DB.UserGroup{}).Select("Level").Where("id = ?", user.UserGroupID).First(&group)
+	return group.Level, (*claims).ID
 }

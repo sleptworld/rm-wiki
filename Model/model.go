@@ -41,8 +41,9 @@ type NewEntry struct {
 }
 
 type UpdateEntry struct {
+	ID      uint
 	Content string
-	Tags []string
+	Tags    []string
 }
 
 // For Show

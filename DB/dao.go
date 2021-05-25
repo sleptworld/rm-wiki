@@ -47,18 +47,11 @@ func RegisterUser(db *gorm.DB,user *User,res interface{}) (int64,error) {
 	return result.RowsAffected,result.Error
 }
 
-func UpdateUser(db *gorm.DB,query string,value string,number int,user *User) (int64,error) {
+func UpdateUser(db *gorm.DB,user *User,re interface{}) (int64,error) {
+	res := db.Model(user).Updates(user)
 
-	r := FindUser(db,query,value,number,&User{})
-	if r.Error == nil{
-		if res := r.Updates(user); res.Error != nil{
-			return 0,res.Error
-		} else {
-			return res.RowsAffected,nil
-		}
-	} else {
-		return 0,nil
-	}
+	FindUser(Db,"id = ?",user.ID,1,re)
+	return res.RowsAffected,res.Error
 }
 
 func DeleteUser(db *gorm.DB, condition string, value string, number int) (int64,error) {
@@ -112,40 +105,47 @@ func CreateEntry(db *gorm.DB, entry *Entry,res interface{}) (int64,error){
 	return result.RowsAffected,result.Error
 }
 
-func FindEntry(db *gorm.DB, condition string,value string,number int,res interface{})  *gorm.DB{
+func FindEntry(db *gorm.DB, condition string,value interface{},number int,res interface{})  *gorm.DB{
 	result := search(db.Model(&Entry{}),condition,value,number,res)
 	return result
 }
 
-func UpdateEntry(db *gorm.DB,m *Entry,userid uint){
+func UpdateEntry(db *gorm.DB,m *Entry,re interface{}) error{
+
+	var current Entry
+	res := FindEntry(db,"id = ?",(*m).ID,1,&current)
+	if res.Error != nil{
+		return res.Error
+	}
+
 	err := db.Transaction(func(tx *gorm.DB) error {
-		_, err := CreateHistory(tx, m, userid,&History{})
+		_, err := CreateHistory(tx, &current,&History{})
 		if err != nil {
 			return err
 		}
 		res := tx.Model(m).Updates(m)
 		return res.Error
 	})
-	if err != nil {
-		return 
+
+	if err != nil{
+		return err
 	}
+
+	res = FindEntry(Db,"id = ?",(*m).ID,1,re)
+	return res.Error
 }
-func DeleteEntry(db *gorm.DB,condition string,value string,number int)  (int64,error){
-	res := FindEntry(db,condition,value,number,&Entry{})
-	if res.Error == nil{
-		result := res.Delete(&Entry{})
-		return result.RowsAffected,nil
-	} else {
-		return 0,res.Error
-	}
+func DeleteEntry(db *gorm.DB,condition string,value interface{})  (int64,error){
+	res := db.Where(condition,value).Delete(&Entry{})
+
+	return res.RowsAffected,res.Error
 }
 
 // History
 
-func CreateHistory(db *gorm.DB,e *Entry,userid uint,res interface{}) (int64,error){
+func CreateHistory(db *gorm.DB,e *Entry,res interface{}) (int64,error){
 	result := db.Create(&History{
 		EntryID: e.ID,
-		UserID:  userid,
+		UserID:  e.UserID,
 		Content: e.Content,
 	})
 

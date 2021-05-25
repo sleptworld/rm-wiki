@@ -7,7 +7,6 @@ import (
 	"github.com/sleptworld/test/Model"
 	"gorm.io/gorm"
 	"net/http"
-	"strconv"
 )
 
 type e struct {
@@ -24,11 +23,11 @@ func GETEntry(c *gin.Context) {
 
 	if err != nil {
 
-		code,mes := DB.CheckErrors(err)
-		c.JSON(http.StatusBadRequest,Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
-			"Message":mes,
-			"Reason":code,
-		},0,nil))
+		code, mes := DB.CheckErrors(err)
+		c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest, Config.ApiVersion, map[string]string{
+			"Message": mes,
+			"Reason":  code,
+		}, 0, nil))
 
 		return
 
@@ -46,14 +45,14 @@ func GETEntry(c *gin.Context) {
 
 func POSTEntry(c *gin.Context) {
 
-	l,uid := Claims2Level(c)
+	l, uid := Claims2Level(c)
 
 	e := Model.NewEntry{}
 	err := c.BindJSON(&e)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest, Config.ApiVersion, map[string]string{
-			"Message":Config.ErrBodyFormat,
-			"Reason":Config.MsgBodyFormat,
+			"Message": Config.ErrBodyFormat,
+			"Reason":  Config.MsgBodyFormat,
 		}, 0, nil))
 		return
 	}
@@ -69,15 +68,15 @@ func POSTEntry(c *gin.Context) {
 		policy = true
 	}
 
-	if err := Model.EntryCheck(&e,uid,policy,&oresult);err == nil{
+	if err := Model.EntryCheck(&e, uid, policy, &oresult); err == nil {
 		result := Model.SingleEntry{}
 		Model.Entry2Entry(&oresult, &result)
 		c.JSON(http.StatusOK, Model.Api(http.StatusOK, Config.ApiVersion, nil, 1, result))
 	} else {
-		code,msg := DB.CheckErrors(err)
+		code, msg := DB.CheckErrors(err)
 		c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest, Config.ApiVersion, map[string]string{
-			"Message":msg,
-			"Reason":code,
+			"Message": msg,
+			"Reason":  code,
 		}, 0, nil))
 	}
 }
@@ -85,7 +84,7 @@ func POSTEntry(c *gin.Context) {
 func GETEntryByID(c *gin.Context) {
 	id := c.Param("id")
 
-	CheckParamType(c,id,"Num", func(c *gin.Context) {
+	CheckParamType(c, id, "Num", func(c *gin.Context) {
 		var res DB.Entry
 		r := DB.FindEntry(DB.Db.Preload("Tags").Preload("History"),
 			"id = ?", id, 1, &res)
@@ -95,11 +94,11 @@ func GETEntryByID(c *gin.Context) {
 			Model.Entry2Entry(&res, &result)
 			c.JSON(http.StatusOK, Model.Api(http.StatusOK, Config.ApiVersion, nil, int(r.RowsAffected), result))
 		} else {
-			errCode,errMessage := DB.CheckErrors(r.Error)
-			c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
-				"Message":errMessage,
-				"Reason":errCode,
-			},0,nil))
+			errCode, errMessage := DB.CheckErrors(r.Error)
+			c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest, Config.ApiVersion, map[string]string{
+				"Message": errMessage,
+				"Reason":  errCode,
+			}, 0, nil))
 			return
 		}
 	})
@@ -108,44 +107,74 @@ func GETEntryByID(c *gin.Context) {
 func DELETEEntryByID(c *gin.Context) {
 	id := c.Param("id")
 
-	CheckParamType(c,id,"Num", func(c *gin.Context) {
+	CheckParamType(c, id, "Num", func(c *gin.Context) {
 
 		var entry DB.Entry
-		if r:= DB.FindEntry(DB.Db,"id = ?",id,1,&entry);r.Error==nil{
-			IDorGroupCheck(c,3,entry.UserID, func(c *gin.Context) {
-				if l,err := DB.DeleteEntry(DB.Db,"id = ?",id,1);err == nil{
-					c.JSON(http.StatusOK,Model.Api(http.StatusOK,Config.ApiVersion,nil,int(l),entry))
+		if r := DB.FindEntry(DB.Db, "id = ?", id, 1, &entry); r.Error == nil {
+			IDorGroupCheck(c, 3, entry.UserID, func(c *gin.Context) {
+				if l, err := DB.DeleteEntry(DB.Db, "id = ?", id, 1); err == nil {
+					c.JSON(http.StatusOK, Model.Api(http.StatusOK, Config.ApiVersion, nil, int(l), entry))
 					return
 				} else {
-					code,msg := DB.CheckErrors(err)
-					c.JSON(http.StatusBadRequest,Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
-						"Message":msg,
-						"Reason":code,
-					},0,nil))
+					code, msg := DB.CheckErrors(err)
+					c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest, Config.ApiVersion, map[string]string{
+						"Message": msg,
+						"Reason":  code,
+					}, 0, nil))
 					return
 				}
 			})
 		} else {
-			c.JSON(http.StatusBadRequest,Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
-				"Message" : Config.MsgNoValueForID,
-				"Reason" : Config.ErrValueFormat,
-			},0,nil))
+			c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest, Config.ApiVersion, map[string]string{
+				"Message": Config.MsgNoValueForID,
+				"Reason":  Config.ErrValueFormat,
+			}, 0, nil))
 		}
 	})
 }
 
 func PATCHEntryByID(c *gin.Context) {
-	l,uid := Claims2Level(c)
-	
-	i := strconv.Itoa(int(uid))
-	IDorGroupCheck(c,3,i, func(c *gin.Context) {
-		up := Model.UpdateEntry{}
-		err := c.BindJSON(&up)
-		if err != nil {
-			return
-		}
-		res := Model.EntryUpdate2Entry(&up)
-		DB.UpdateEntry(DB.Db,&res,uid)
-	})
+
+	up := Model.UpdateEntry{}
+	err := c.BindJSON(&up)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest, Config.ApiVersion, map[string]string{
+			"Message": Config.MsgBodyFormat,
+			"Reason":  Config.ErrBodyFormat,
+		}, 0, nil))
+		return
+	}
+
+	var e DB.Entry
+	DB.FindEntry(DB.Db, "id = ?", up.ID, 1, &e)
+
+	p := access{
+		idAccess:           true,
+		id:                 e.UserID,
+		MinimumPermissions: 3,
+		handlers: map[DB.Level]ac{
+			3: func(c *gin.Context, id uint, level DB.Level) {
+				res := Model.EntryUpdate2Entry(&up)
+				callback := Model.SingleEntry{}
+				ocallback := DB.Entry{}
+				err = DB.UpdateEntry(DB.Db, &res,&ocallback)
+				if err != nil {
+					code,msg := DB.CheckErrors(err)
+					c.JSON(http.StatusInternalServerError, Model.Api(http.StatusInternalServerError, Config.ApiVersion, map[string]string{
+						"Message": code,
+						"Reason":  msg,
+					}, 0, nil))
+					return
+				}
+
+				Model.Entry2Entry(&ocallback,&callback)
+
+				c.JSON(http.StatusOK,Model.Api(http.StatusOK,Config.ApiVersion,nil,1,callback))
+				return
+			},
+		},
+	}
+
+	p.policy(c)
 
 }

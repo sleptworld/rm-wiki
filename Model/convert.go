@@ -156,6 +156,7 @@ func UserUpdate2User(from *UserUpdate) DB.User {
 func EntryUpdate2Entry(from *UpdateEntry) DB.Entry{
 	var result DB.Entry
 	tags := DB.Tags2Entry((*from).Tags)
+	result.ID = (*from).ID
 	result.Content = (*from).Content
 	result.Tags = tags
 

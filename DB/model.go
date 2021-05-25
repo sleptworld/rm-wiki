@@ -59,7 +59,7 @@ type UserGroup struct {
 	gorm.Model
 	GroupName string `gorm:"size:10"`
 	Users     []User
-	Level     int8 `gorm:"not null"`
+	Level     Level  `gorm:"not null;default:0"`
 }
 type User struct {
 	gorm.Model

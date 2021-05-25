@@ -8,9 +8,17 @@ import (
 	"fmt"
 	"github.com/goinggo/mapstructure"
 	"golang.org/x/crypto/bcrypt"
+	"math/rand"
 	"os"
 	"regexp"
+	"strconv"
 )
+
+func GetRandomString(n int) string{
+	randBytes := make([]byte,n/2)
+	rand.Read(randBytes)
+	return fmt.Sprintf("%x",randBytes)
+}
 
 func mapToStruct(m map[string]interface{},s interface{}) (error){
 	if err := mapstructure.Decode(m,s);err != nil{
@@ -123,5 +131,11 @@ func StringTypeCheck(p string, t string) bool {
 	default:
 		return false
 	}
+}
 
+func String2uint(num string) (uint,error) {
+	intNum,err := strconv.Atoi(num)
+	uIntnum := uint(intNum)
+
+	return uIntnum,err
 }

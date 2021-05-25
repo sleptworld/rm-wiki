@@ -38,7 +38,7 @@ func RegCheck(r *Reg,res interface{})  (int64,error) {
 	r_u := DB.User{
 		Name:        r.Name,
 		Email:       r.Email,
-		UserGroupID: 1,
+		UserGroupID: 2,
 		Country:     r.Country,
 		Language:    r.Language,
 		Sex:         r.Sex,
@@ -73,4 +73,14 @@ func EntryCheck(e *NewEntry,id uint,rev bool,res interface{}) error {
 		return r.Error
 	}
 
+}
+
+func UpdateEntryCheck(e *UpdateEntry,id uint,res interface{}) error{
+	rE := DB.Entry{
+		Model:gorm.Model{ID:id},
+		Content: e.Content,
+		Tags: DB.Tags2Entry(e.Tags),
+	}
+	err := DB.UpdateEntry(DB.Db,&rE,res)
+	return err
 }

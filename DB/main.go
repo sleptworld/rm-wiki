@@ -3,6 +3,7 @@ package DB
 import (
 	"context"
 	"github.com/sleptworld/test/Config"
+	"github.com/sleptworld/test/tools"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"sync"
@@ -62,7 +63,7 @@ func (m *dbt) InitDBPool() (*gorm.DB, error) {
 }
 
 func InitDB	() error{
-	err := Db.AutoMigrate( &Lang{}, &UserGroup{},&User{}, &Draft{}, &Cat{}, &Entry{}, &History{}, &Tag{})
+	err := Db.AutoMigrate(&Lang{}, &UserGroup{},&User{}, &Draft{}, &Cat{}, &Entry{}, &History{}, &Tag{})
 
 	Db.Exec("CREATE INDEX path_gist_idx ON cats USING gist(path)")
 	Db.Exec("CREATE INDEX path_idx ON cats USING btree(path)")
@@ -86,6 +87,14 @@ func InitDB	() error{
 		Db.Where(g).FirstOrCreate(&UserGroup{})
 	}
 
-		 CreateCat(Db,"root",nil)
+	CreateCat(Db,"root",nil)
+	anonymous := User{
+		Name:        "Anonymous",
+		Email:       "empty",
+		UserGroupID: 2,
+	}
+	UserPretreatment(&anonymous,tools.GetRandomString(16))
+
+	_,err = RegisterUser(Db,&anonymous,&User{})
 	return err
 }

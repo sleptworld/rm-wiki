@@ -3,13 +3,12 @@ package Router
 import (
 	"github.com/gin-gonic/gin"
 	v1 "github.com/sleptworld/test/Controller/v1"
-	"github.com/sleptworld/test/Middleware"
 )
 
 func UserRouter(group *gin.RouterGroup){
-	userSource := "/user"
+	userSource := "/Users/"
 
-	group.GET(userSource,v1.GETUser,Middleware.Jwt())
+	group.GET(userSource,v1.GETUser)
 	group.POST(userSource,v1.POSTUser)
 
 	uGroup := group.Group(userSource)

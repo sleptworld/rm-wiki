@@ -8,8 +8,8 @@ import (
 func EntryRouter(group *gin.RouterGroup) {
 
 	// All Entry
-	group.GET("/Entry", v1.GETEntry)
-	group.POST("/Entry", v1.POSTEntry)
+	group.GET("/Entry/", v1.GETEntry)
+	group.POST("/Entry/", v1.POSTEntry)
 
 	eGroup := group.Group("/Entry")
 	{
@@ -17,7 +17,6 @@ func EntryRouter(group *gin.RouterGroup) {
 		singleEntry := "/:id"
 		eGroup.GET(singleEntry, v1.GETEntryByID)
 
-		eGroup.PUT(singleEntry, v1.PUTEntryByID)
 		eGroup.DELETE(singleEntry, v1.DELETEEntryByID)
 		eGroup.PATCH(singleEntry, v1.PATCHEntryByID)
 	}

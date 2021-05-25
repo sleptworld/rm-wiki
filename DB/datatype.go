@@ -4,6 +4,8 @@ import (
 	"database/sql/driver"
 )
 
+type Level = int8
+
 type ltree struct {
 	path string
 }
