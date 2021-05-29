@@ -1,9 +1,8 @@
 package DB
 
 import (
-	"context"
 	"github.com/sleptworld/test/Config"
-	"github.com/sleptworld/test/tools"
+	"golang.org/x/net/context"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"sync"
@@ -87,14 +86,13 @@ func InitDB	() error{
 		Db.Where(g).FirstOrCreate(&UserGroup{})
 	}
 
-	CreateCat(Db,"root",nil)
-	anonymous := User{
-		Name:        "Anonymous",
-		Email:       "empty",
-		UserGroupID: 2,
-	}
-	UserPretreatment(&anonymous,tools.GetRandomString(16))
-
-	_,err = RegisterUser(Db,&anonymous,&User{})
+	_,err = Init(&Cat{Path: "root"}).Create(nil)
+	//anonymous := User{
+	//	Name:        "Anonymous",
+	//	Email:       "empty",
+	//	UserGroupID: 2,
+	//}
+	//UserPretreatment(&anonymous,tools.GetRandomString(16))
+	//_,err = Init(&anonymous).Create(nil)
 	return err
 }

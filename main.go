@@ -1,10 +1,14 @@
 package main
 
 import (
-	"github.com/gin-gonic/gin"
 	"github.com/sleptworld/test/DB"
-	"github.com/sleptworld/test/Middleware"
-	"github.com/sleptworld/test/Router"
+	"github.com/sleptworld/test/Model"
+	"gorm.io/gorm"
+)
+
+var (
+	Db *gorm.DB
+	err error
 )
 
 func main() {
@@ -16,15 +20,29 @@ func main() {
 		if err != nil {
 			return
 		}
-		r := gin.New()
-		r.Use(gin.Logger(),Middleware.Jwt(),gin.Recovery())
-		v1 := r.Group("v1")
 
-		Router.EntryRouter(v1)
-		Router.UserRouter(v1)
-		Router.TokenRouter(v1)
+		test := (&Model.UserModel{})
+		test.InitModel(&Model.Reg{
+			Name:       "tcc",
+			Email:      "tcc@123.com",
+			Pwd:        "fadaf",
+			Country:    "",
+			Language:   "",
+			Sex:        1,
+			Profession: "",
+		})
 
-		r.Run()
+		var result DB.User
+		test.Create(&result)
+	//	r := gin.New()
+	//	r.Use(gin.Logger(),Middleware.Jwt(),gin.Recovery())
+	//	v1 := r.Group("v1")
+	//
+	//	Router.EntryRouter(v1)
+	//	Router.UserRouter(v1)
+	//	Router.TokenRouter(v1)
+	//
+	//	r.Run()
 	}
 
 	return

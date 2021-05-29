@@ -1,13 +1,11 @@
 package DB
 
 import (
-	"errors"
+	"github.com/pkg/errors"
 	"github.com/sleptworld/test/Config"
 	"github.com/sleptworld/test/tools"
 	"gorm.io/gorm"
 )
-
-
 
 func UserPretreatment(u *User,p string){
 	pwd,err := tools.PwdEncrypt(p,Config.AesKey)
@@ -27,10 +25,11 @@ func Tags2Entry(t []string) []Tag{
 	return res
 }
 
-func CatCheck(c string,res interface{}) *gorm.DB {
-	r := CreateCat(Db,c,res)
+func CatCheck(c string,res interface{}) (int64,error) {
 
-	return r
+	num, err := Init(&Cat{Path: c}).Create(res)
+
+	return num,err
 }
 
 func CheckErrors(err error) (code string,msg string){

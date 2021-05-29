@@ -85,9 +85,3 @@ type RealName struct {
 	id   uint
 	Name string
 }
-
-//type Comments struct {
-//	gorm.DB
-//	Content string
-//	UserID  uint
-//}

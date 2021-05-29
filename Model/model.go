@@ -1,16 +1,68 @@
 package Model
 
 import (
+	"github.com/sleptworld/test/DB"
+	"github.com/sleptworld/test/tools"
 	"net/http"
 	"time"
 )
 
+func convertWrapper(from interface{},to interface{}) (interface{},[]string)  {
+	label, f,err := tools.ReadLabel(from, to)
+	if err != nil {
+		return nil,f
+	}
+	return label,f
+}
+
+type UserModel struct {
+	DB.Model
+}
+
+func (u *UserModel)InitModel(s interface{})  {
+	tmp ,f := convertWrapper(s,&DB.User{})
+	if e,ok := tmp.(DB.User);ok{
+		for _,v := range f{
+			if v == "Pwd"{
+				pwd := tools.ReflectGetValue(s,v)
+				DB.UserPretreatment(&e,pwd.(string))
+			}
+		}
+		u.Init(&e)
+	}
+}
+
+
+func (e *EntryModel) InitModel(s interface{})  {
+	tmp ,f := convertWrapper(s,&DB.Entry{})
+	if en,ok := tmp.(DB.Entry);ok{
+		for _,v := range f{
+			switch v {
+			case "Tags":
+				tmp := tools.ReflectGetValue(s,v).([]string)
+				tags := DB.Tags2Entry(tmp)
+				en.Tags = tags
+			default:
+				return
+			}
+		}
+		e.Init(&en)
+	}
+}
+
+type EntryModel struct {
+	DB.Model
+}
+
+
 type Login struct {
+	UserModel
 	Email string `json:"email"`
 	Pwd   string `json:"pwd"`
 }
 
 type Reg struct {
+	UserModel
 	Name       string `json:"name"`
 	Email      string `json:"email"`
 	Pwd        string `json:"pwd"`
@@ -21,6 +73,7 @@ type Reg struct {
 }
 
 type UserUpdate struct {
+	UserModel
 	ID          uint
 	Name        string
 	Pwd         string
@@ -31,7 +84,9 @@ type UserUpdate struct {
 	Mechanism   string
 }
 
+
 type NewEntry struct {
+	EntryModel
 	Title   string
 	Content string
 	Tags    []string
@@ -41,6 +96,7 @@ type NewEntry struct {
 }
 
 type UpdateEntry struct {
+	EntryModel
 	ID      uint
 	Content string
 	Tags    []string

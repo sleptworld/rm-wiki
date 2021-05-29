@@ -4,21 +4,64 @@ import (
 	"errors"
 	"github.com/sleptworld/test/tools"
 	"gorm.io/gorm"
+	"reflect"
 	"strings"
 )
 
-type Dao interface {
-	Create()
-	Delete()
-	Update()
-	Query()
+
+type Model struct {
+	m interface{}
 }
 
-// Tools for search
+func Init(s interface{}) *Model{
+	reType := reflect.TypeOf(s)
+	if reType.Kind() != reflect.Ptr || reType.Elem().Kind() != reflect.Struct{
+		return nil
+	}
 
-func search (db *gorm.DB,query string,value interface{},number int,res interface{}) *gorm.DB{
+	return &Model{m: s}
+}
+
+func (m *Model) Init (s interface{}) *Model{
+	reType := reflect.TypeOf(s)
+	if reType.Kind() != reflect.Ptr || reType.Elem().Kind() != reflect.Struct{
+		return nil
+	}
+
+	m.m = s
+	return m
+}
+
+func (m *Model) Query(re interface{},number int,c string,values ...interface{})*gorm.DB{
+	if c == ""{
+		return search(Db.Model(m.m), number,re,m.m,nil)
+	}
+	return search(Db.Model(m.m),number,re,c,values)
+}
+
+func (m *Model) Create(re interface{}) (int64,error){
+	res := Db.Where(m.m).FirstOrCreate(m.m)
+	m.Query(re,1,"",nil)
+	return res.RowsAffected,res.Error
+}
+
+func (m *Model) Update(re interface{}) (int64,error){
+	res := Db.Model(m.m).Updates(m.m)
+	return res.RowsAffected,res.Error
+}
+
+func (m *Model) Delete(c string,values ...interface{}) (int64,error){
+	res := delete(m.m,c,values...)
+	return res.RowsAffected,res.Error
+}
+
+func search (db *gorm.DB,number int , res interface{},query interface{},value ...interface{}) *gorm.DB{
 	var r *gorm.DB
-	r = db.Where(query,value)
+	if reflect.TypeOf(query).Kind() != reflect.String{
+		r = db.Where(query)
+	}else {
+		r = db.Where(query,value...)
+	}
 	if r.Error == nil{
 		switch number {
 		case 0:
@@ -38,40 +81,59 @@ func search (db *gorm.DB,query string,value interface{},number int,res interface
 	}
 }
 
-// User DB's Dao
+// tools for delete
 
-func RegisterUser(db *gorm.DB,user *User,res interface{}) (int64,error) {
-	// Email only
-	result := db.Where(User{Email:user.Email}).FirstOrCreate(user)
-	FindUser(db,"email = ?",user.Email,1,res)
-	return result.RowsAffected,result.Error
-}
-
-func UpdateUser(db *gorm.DB,user *User,re interface{}) (int64,error) {
-	res := db.Model(user).Updates(user)
-
-	FindUser(Db,"id = ?",user.ID,1,re)
-	return res.RowsAffected,res.Error
-}
-
-func DeleteUser(db *gorm.DB, condition string, value string, number int) (int64,error) {
-	r := FindUser(db,condition,value,number,&User{})
-	if r.Error == nil{
-		result := r.Delete(&User{})
-		if result.Error != nil{
-			return 0,result.Error
-		}else {
-			return result.RowsAffected,nil
-		}
+func delete(m interface{},c string,values ...interface{})  *gorm.DB{
+	var result *gorm.DB
+	if c == ""{
+		result = Db.Where(m).Delete(m)
 	} else {
-		return 0,r.Error
+		result = Db.Where(c,values...).Delete(m)
 	}
+	return result
 }
 
-func FindUser(db *gorm.DB, query string, value interface{}, number int,res interface{}) *gorm.DB{
-	m := db.Model(&User{})
-	result := search(m,query,value,number,res)
+// Cat
+
+func (cat *Cat) Node(re interface{})  *gorm.DB{
+	result := Db.Where("path ~ ?",cat.Path).First(&re)
 	return result
+}
+
+func (cat *Cat) Children(res interface{}) *gorm.DB{
+
+	result := Init(cat).Query(res,3,"path ~ ?",cat.Path+".*{1}",res)
+	return result
+}
+
+func (cat *Cat) Find (res interface{}) *gorm.DB{
+	result := Init(cat).Query(res,2,"path <@ ?",cat.Path,res)
+	return result
+}
+
+func (cat *Cat) Parent(res interface{})  *gorm.DB {
+	var result []Cat
+
+	h := Init(cat).Query(&result,2,"path ~ ?","*{1}."+cat.Path)
+	if h.Error != nil{
+		return h
+	}
+
+	comma := strings.Index(result[0].Path,".")
+	p := result[0].Path[0:comma]
+	h = Init(cat).Query(res,2,"path ~ ?",p)
+	return h
+}
+
+func (cat *Cat) Brother(res interface{}) *gorm.DB{
+	var p []Cat
+	h := cat.Parent(&p)
+	if h.Error != nil{
+		return h
+	}
+	parent := p[0].Path
+	h = Init(cat).Query(res,2,"path ~ ?",parent+"."+"!"+cat.Path+"{1}")
+	return h
 }
 
 func UserForeignKey(db *gorm.DB,m map[string]interface{},condition string) ([]map[string]interface{},error){
@@ -94,137 +156,6 @@ func UserForeignKey(db *gorm.DB,m map[string]interface{},condition string) ([]ma
 	}
 }
 
-// Entry DB's Dao
-
-func CreateEntry(db *gorm.DB, entry *Entry,res interface{}) (int64,error){
-	// Title Only
-	result := db.Create(entry)
-
-	FindEntry(db,"title = ?",entry.Title,1,res)
-
-	return result.RowsAffected,result.Error
-}
-
-func FindEntry(db *gorm.DB, condition string,value interface{},number int,res interface{})  *gorm.DB{
-	result := search(db.Model(&Entry{}),condition,value,number,res)
-	return result
-}
-
-func UpdateEntry(db *gorm.DB,m *Entry,re interface{}) error{
-
-	var current Entry
-	res := FindEntry(db,"id = ?",(*m).ID,1,&current)
-	if res.Error != nil{
-		return res.Error
-	}
-
-	err := db.Transaction(func(tx *gorm.DB) error {
-		_, err := CreateHistory(tx, &current,&History{})
-		if err != nil {
-			return err
-		}
-		res := tx.Model(m).Updates(m)
-		return res.Error
-	})
-
-	if err != nil{
-		return err
-	}
-
-	res = FindEntry(Db,"id = ?",(*m).ID,1,re)
-	return res.Error
-}
-func DeleteEntry(db *gorm.DB,condition string,value interface{})  (int64,error){
-	res := db.Where(condition,value).Delete(&Entry{})
-
-	return res.RowsAffected,res.Error
-}
-
-// History
-
-func CreateHistory(db *gorm.DB,e *Entry,res interface{}) (int64,error){
-	result := db.Create(&History{
-		EntryID: e.ID,
-		UserID:  e.UserID,
-		Content: e.Content,
-	})
-
-	FindHistory(db,"Content = ?",e.Content,1,res)
-	return result.RowsAffected,result.Error
-}
-
-func FindHistory(db *gorm.DB,condition string,value string,number int,res interface{}) *gorm.DB{
-	result := search(db.Model(&History{}),condition,value,number,res)
-
-	return result
-}
-
-func DropHistory(db *gorm.DB,condition string,value string,number int) (int64,error){
-
-	result := FindHistory(db,condition,value,number,&History{})
-
-	if result.Error != nil{
-		return 0,result.Error
-	} else {
-		result := result.Delete(&History{})
-		return result.RowsAffected,result.Error
-	}
-}
-
-// Cat
-
-func CreateCat(db *gorm.DB,p string,r interface{}) *gorm.DB {
-
-	res := db.FirstOrCreate(&Cat{Path: p})
-	SearchCat(db,"path = ?",p,r)
-	return res
-}
-
-func SearchCat(db *gorm.DB,condition string,value string,res interface{}) *gorm.DB{
-	result := search(db.Model(&Cat{}),condition,value,2,res)
-	return result
-}
-
-func CatNode(db *gorm.DB,catNode string)  (Cat,error){
-	var res Cat
-	result := db.Where("path ~ ?",catNode).First(&res)
-	return res,result.Error
-}
-
-func CatChildren(db *gorm.DB,catNode string,res interface{}) *gorm.DB{
-	result := SearchCat(db,"path ~ ?",catNode+".*{1}",res)
-	return result
-}
-
-func FindCat(db *gorm.DB,catNode string,res interface{}) *gorm.DB{
-	result := SearchCat(db,"path <@ ?",catNode,res)
-	return result
-}
-
-func CatParent(db *gorm.DB,catNode string,res interface{})  *gorm.DB {
-	var result []Cat
-	h := SearchCat(db,"path ~ ?","*{1}."+catNode,&result)
-
-	if h.Error != nil{
-		return h
-	}
-
-	comma := strings.Index(result[0].Path,".")
-	p := result[0].Path[0:comma]
-	h = SearchCat(db,"path ~ ?",p,res)
-	return h
-}
-
-func CatBrother(db *gorm.DB,catNode string,res interface{}) *gorm.DB{
-	var p []Cat
-	h := CatParent(db,catNode,&p)
-	if h.Error != nil{
-		return h
-	}
-		parent := p[0].Path
-		h = SearchCat(db,"path ~ ?",parent+"."+"!"+catNode+"{1}",&res)
-		return h
-}
 
 func Cat2Entries(db *gorm.DB,c *Cat) ([]Entry,error){
 	var res []Entry
@@ -233,46 +164,5 @@ func Cat2Entries(db *gorm.DB,c *Cat) ([]Entry,error){
 		return res,r
 	} else {
 		return nil,r
-	}
-}
-
-func DeleteCat(db *gorm.DB,c *Cat) (int64,error){
-	res := db.Delete(c)
-	return res.RowsAffected,res.Error
-}
-
-// Tag
-
-func CreateTag(db *gorm.DB,t *Tag) (int64,error){
-	res := db.Where("name = ?",t.Name).First(t)
-	return res.RowsAffected,res.Error
-}
-
-func DeleteTag(db *gorm.DB,t *Tag) (int64,error){
-	res := db.Delete(t)
-	return res.RowsAffected,res.Error
-}
-
-// Group
-
-func CreateGroup(db *gorm.DB,group []UserGroup) (int,error){
-	for index,value := range group{
-		result := db.Where(UserGroup{GroupName: value.GroupName}).FirstOrCreate(&value)
-		if result.Error != nil{
-			return index,result.Error
-		}
-	}
-	return len(group),nil
-}
-
-func DeleteGroup(db *gorm.DB, id uint) (int64,error){
-	if result := db.Delete(&UserGroup{
-		Model:gorm.Model{
-			ID: id,
-		},
-	}) ;result.Error != nil{
-		return 0,result.Error
-	} else {
-		return result.RowsAffected,nil
 	}
 }

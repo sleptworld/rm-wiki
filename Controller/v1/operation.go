@@ -10,7 +10,6 @@ import (
 )
 
 func readEntries(c *gin.Context){
-
 	var res []Model.AllEntry
 	tmpDB := DB.Db.Model(&DB.Entry{})
 	l, p, err := common(c, tmpDB, "Title", []string{}, &res)
