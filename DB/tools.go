@@ -21,7 +21,6 @@ func Tags2Entry(t []string) []Tag{
 			Name:    name,
 		})
 	}
-
 	return res
 }
 

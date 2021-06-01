@@ -15,7 +15,7 @@ type Model struct {
 
 func Init(s interface{}) *Model{
 	reType := reflect.TypeOf(s)
-	if reType.Kind() != reflect.Ptr || reType.Elem().Kind() != reflect.Struct{
+	if reType.Kind() != reflect.Ptr || reType.Elem().Kind() != reflect.Struct || reType.Elem().Kind() != reflect.Slice{
 		return nil
 	}
 
@@ -23,10 +23,6 @@ func Init(s interface{}) *Model{
 }
 
 func (m *Model) Init (s interface{}) *Model{
-	reType := reflect.TypeOf(s)
-	if reType.Kind() != reflect.Ptr || reType.Elem().Kind() != reflect.Struct{
-		return nil
-	}
 
 	m.m = s
 	return m

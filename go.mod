@@ -6,6 +6,8 @@ require (
 	github.com/AndreasBriese/bbloom v0.0.0-20190825152654-46b345b51c96 // indirect
 	github.com/HdrHistogram/hdrhistogram-go v1.1.0 // indirect
 	github.com/Masterminds/semver/v3 v3.1.1 // indirect
+	github.com/casbin/casbin/v2 v2.31.2 // indirect
+	github.com/casbin/gorm-adapter/v3 v3.2.12 // indirect
 	github.com/coreos/bbolt v1.3.3 // indirect
 	github.com/coreos/go-systemd/v22 v22.0.0 // indirect
 	github.com/coreos/pkg v0.0.0-20180928190104-399ea9e2e55f // indirect

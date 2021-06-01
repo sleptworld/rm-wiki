@@ -1,52 +1,84 @@
 package Model
 
 import (
+	"fmt"
+	"github.com/sleptworld/test/Config"
 	"github.com/sleptworld/test/DB"
 	"github.com/sleptworld/test/tools"
 	"net/http"
+	"reflect"
 	"time"
 )
 
-func convertWrapper(from interface{},to interface{}) (interface{},[]string)  {
-	label, f,err := tools.ReadLabel(from, to)
-	if err != nil {
-		return nil,f
-	}
-	return label,f
-}
 
 type UserModel struct {
 	DB.Model
 }
 
+type Model interface {
+	InitModel(s interface{})
+}
+
 func (u *UserModel)InitModel(s interface{})  {
-	tmp ,f := convertWrapper(s,&DB.User{})
-	if e,ok := tmp.(DB.User);ok{
-		for _,v := range f{
-			if v == "Pwd"{
-				pwd := tools.ReflectGetValue(s,v)
-				DB.UserPretreatment(&e,pwd.(string))
-			}
+	reValue := reflect.ValueOf(s)
+	if reValue.Kind() != reflect.Ptr {
+		return
+	}
+
+	errHandler := func(value reflect.Value, key string, set *reflect.Value) {
+		switch key {
+		case "Pwd":
+			pwd, _ := tools.PwdEncrypt(value.String(),Config.AesKey)
+			set.Set(reflect.ValueOf(pwd))
+		default:
+			return
 		}
-		u.Init(&e)
+	}
+
+	switch reValue.Elem().Kind() {
+	case reflect.Struct:
+		a,_ := tools.ReflectReadStruct(s,&DB.User{}, errHandler)
+		u.Init(&a)
+	case reflect.Slice:
+		a,_ := tools.ReflectSliceRead(s,&DB.User{}, errHandler)
+		u.Init(&a)
+	default:
+		return
 	}
 }
 
 
 func (e *EntryModel) InitModel(s interface{})  {
-	tmp ,f := convertWrapper(s,&DB.Entry{})
-	if en,ok := tmp.(DB.Entry);ok{
-		for _,v := range f{
-			switch v {
-			case "Tags":
-				tmp := tools.ReflectGetValue(s,v).([]string)
-				tags := DB.Tags2Entry(tmp)
-				en.Tags = tags
-			default:
-				return
+	reValue := reflect.ValueOf(s)
+	if reValue.Kind() != reflect.Ptr {
+		return
+	}
+	errHandler := func(value reflect.Value, key string, set *reflect.Value) {
+		switch key {
+		case "Tags":
+			var originTags []string
+			for tag := 0;tag < value.Len();tag++{
+				t := value.Index(tag)
+				originTags = append(originTags,t.String())
 			}
+			convertTags := DB.Tags2Entry(originTags)
+			set.Set(reflect.ValueOf(convertTags))
+
+		default:
+			return
 		}
-		e.Init(&en)
+	}
+
+	switch reValue.Elem().Kind() {
+	case reflect.Struct:
+		a,_ := tools.ReflectReadStruct(s,&DB.Entry{}, errHandler)
+		fmt.Println(reflect.TypeOf(a).Kind())
+		e.Init(&a)
+	case reflect.Slice:
+		a,_ := tools.ReflectSliceRead(s,&DB.Entry{}, errHandler)
+		e.Init(a)
+	default:
+		return
 	}
 }
 

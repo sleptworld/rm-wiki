@@ -21,20 +21,14 @@ func LoginCheck(l *Login, db *gorm.DB) (Middleware.CustomClaims,bool) {
 		return r,false
 	}
 
-	if h.Error != nil {
-		return r,false
-	} else {
-		d := user.Pwd
-		err := tools.PwdConfirm(l.Pwd, d, Config.AesKey)
-		if err != nil {
+	d := user.Pwd
+	err := tools.PwdConfirm(l.Pwd, d, Config.AesKey)
+	if err != nil {
 			return r,false
 		} else {
-			r.ID = user.ID
-			r.Email = user.Email
-
-			return r,true
-		}
-
+		r.ID = user.ID
+		r.Email = user.Email
+		return r,true
 	}
 }
 
