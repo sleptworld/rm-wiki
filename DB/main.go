@@ -62,7 +62,7 @@ func (m *dbt) InitDBPool() (*gorm.DB, error) {
 }
 
 func InitDB	() error{
-	err := Db.AutoMigrate(&Lang{}, &UserGroup{},&User{}, &Draft{}, &Cat{}, &Entry{}, &History{}, &Tag{})
+	err := Db.AutoMigrate(&Lang{}, &User{}, &Draft{}, &Cat{}, &Entry{}, &History{}, &Tag{})
 
 	Db.Exec("CREATE INDEX path_gist_idx ON cats USING gist(path)")
 	Db.Exec("CREATE INDEX path_idx ON cats USING btree(path)")
@@ -73,26 +73,13 @@ func InitDB	() error{
 		{Lang: "zh-TW"},
 	}
 
-	groups := []UserGroup{
-		{GroupName: "Admin",Level: 3},
-		{GroupName: "Anonymous",Level: 0},
-	}
 
 	for _,l := range langs{
 		Db.Where(l).FirstOrCreate(&Lang{})
 	}
 
-	for _,g := range groups{
-		Db.Where(g).FirstOrCreate(&UserGroup{})
-	}
-
 	_,err = Init(&Cat{Path: "root"}).Create(nil)
-	//anonymous := User{
-	//	Name:        "Anonymous",
-	//	Email:       "empty",
-	//	UserGroupID: 2,
-	//}
-	//UserPretreatment(&anonymous,tools.GetRandomString(16))
-	//_,err = Init(&anonymous).Create(nil)
+
+	InitCasbin()
 	return err
 }

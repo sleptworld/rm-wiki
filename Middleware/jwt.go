@@ -5,7 +5,6 @@ import (
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gin-gonic/gin"
 	"github.com/sleptworld/test/Config"
-	"net/http"
 )
 
 var (
@@ -67,7 +66,6 @@ func Jwt() gin.HandlerFunc {
 	return func(context *gin.Context) {
 		token := context.Request.Header.Get("token")
 		if token == "" {
-			context.Set("hasToken",false)
 			return
 		}
 
@@ -77,22 +75,12 @@ func Jwt() gin.HandlerFunc {
 		if err != nil {
 			switch err.Error() {
 			case Expired:
-				context.JSON(http.StatusOK, gin.H{
-					"status": -1,
-					"msg":    "This token has expired.",
-					"data":   nil,
-				})
-				context.Abort()
-				return
+				context.Set("tokenStatus",Expired)
 			default:
-				context.JSON(http.StatusOK, gin.H{
-					"status": -1,
-					"msg":    err.Error(),
-					"data":   nil,
-				})
-				context.Abort()
-				return
+				context.Set("tokenStatus",err.Error())
 			}
+
+			return
 		}
 		context.Set("claims", claims)
 	}

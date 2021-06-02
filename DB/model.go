@@ -55,18 +55,19 @@ type Draft struct {
 	Content string `gorm:"size:15000"`
 }
 
-type UserGroup struct {
-	gorm.Model
-	GroupName string `gorm:"size:10"`
-	Users     []User
-	Level     Level  `gorm:"not null;default:0"`
-}
+//type UserGroup struct {
+//	gorm.Model
+//	GroupName string `gorm:"size:10"`
+//	Users     []User
+//	Level     Level  `gorm:"not null;default:0"`
+//}
+
 type User struct {
 	gorm.Model
 	Name        string `gorm:"not null;check:Name <> '';size:30"`
 	Email       string `gorm:"unique;check:Email <> '';size:30"`
 	Pwd         []byte `gorm:"not null;type:bytea"`
-	UserGroupID uint   `gorm:"not null;default:2"`
+	//UserGroupID uint   `gorm:"not null;default:2"`
 	Birthday    time.Time
 	Avatar      string
 	Description string `gorm:"default:'He said ohhhhhh'"`

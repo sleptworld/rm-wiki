@@ -5,7 +5,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sleptworld/test/Config"
 	"github.com/sleptworld/test/DB"
-	"github.com/sleptworld/test/Middleware"
 	"github.com/sleptworld/test/Model"
 	"github.com/sleptworld/test/tools"
 	"gorm.io/gorm"
@@ -15,50 +14,6 @@ import (
 
 type au func(c *gin.Context)
 type ac func(c *gin.Context, id uint, level DB.Level)
-
-type access struct {
-	idAccess           bool
-	id                 uint
-	MinimumPermissions DB.Level
-
-	handlers map[DB.Level]ac
-}
-
-func (a *access) policy(c *gin.Context) {
-
-	l, id := Claims2Level(c)
-
-	if l == Config.AdminLevel {
-		(a.handlers[Config.AdminLevel])(c, id, l)
-		return
-	}
-
-	if a.idAccess{
-		if id == a.id{
-			var p ac
-			h, ok := a.handlers[0]
-			if ok {
-				p = h
-			} else {
-				h, ok = a.handlers[l]
-				if ok {
-					p = h
-				}
-			}
-			p = a.handlers[a.MinimumPermissions]
-			p(c,id,l)
-			return
-		}
-	}
-
-	p, ok := a.handlers[l]
-	if ok {
-		p(c, id, l)
-		return
-	}
-	checkTemplate(l >= a.MinimumPermissions, c, id, l, a.handlers[a.MinimumPermissions])
-	return
-}
 
 // tool functions
 
@@ -78,13 +33,10 @@ func common(c *gin.Context, tx *gorm.DB, order string, preloads []string, res in
 		}
 
 		temp := tx.Limit(limit).Offset(offset).Order(or)
-
 		for _, preload := range preloads {
 			temp = temp.Preload(preload)
 		}
-
 		rsss := temp.Find(res)
-
 		if rsss.Error != nil {
 			return 0, nil, rsss.Error
 		}
@@ -95,118 +47,20 @@ func common(c *gin.Context, tx *gorm.DB, order string, preloads []string, res in
 			"order":  or,
 			"lang":   la,
 		}
-
 		return int(rsss.RowsAffected), p, nil
-
 	} else {
 		return 0, nil, errors.New("wrong format")
 	}
 }
 
-func Authentication(c *gin.Context, level DB.Level) bool {
 
-	cl, exist := c.Get("claims")
-
-	if exist {
-
-		customClaims := cl.(*Middleware.CustomClaims)
-
-		id := customClaims.ID
-
-		userId := strconv.Itoa(int(id))
-		email := customClaims.Email
-
-		type g struct {
-			UserGroupID uint
-		}
-
-		type ll struct {
-			Level DB.Level
-		}
-
-		var u g
-		var l ll
-
-		DB.FindUser(DB.Db, "id = ? AND email = "+"'"+email+"'", userId, 1, &u)
-		DB.Db.Model(&DB.UserGroup{}).Where("id = ?", u.UserGroupID).First(&l)
-
-		if l.Level >= level {
-			return true
-		}
-	}
-
-	return 0 > level
-}
-
-func CheckByID(c *gin.Context, id uint) bool {
-	var claims *Middleware.CustomClaims
-	if cl, exist := c.Get("claims"); exist {
-		claims = cl.(*Middleware.CustomClaims)
-
-		if claims.ID == id {
-			return true
-		}
-	}
-
-	return false
-
-}
-
-func checkTemplate(ok bool, c *gin.Context, id uint, level DB.Level, handler ac) {
-
-	if ok {
-		(handler)(c, id, level)
+func CheckParamType(c *gin.Context,id string,t string,handler au)  {
+	if tools.StringTypeCheck(id,t){
+		handler(c)
 	} else {
-		c.JSON(http.StatusUnauthorized, Model.Api(http.StatusUnauthorized, Config.ApiVersion, map[string]string{
-			"Message": Config.MsgUnauthorized,
-			"Reason":  Config.ErrUnauthorized,
-		}, 0, nil))
-		return
+		c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest,Config.ApiVersion,map[string]string{
+			"msg":"a",
+			"c":"d",
+		},1,nil))
 	}
-}
-
-func aucheckTemplate(ok bool, c *gin.Context, handler au) {
-	if ok {
-		(handler)(c)
-	} else {
-		c.JSON(http.StatusUnauthorized, Model.Api(http.StatusUnauthorized, Config.ApiVersion, map[string]string{
-			"Message": Config.ErrUnauthorized,
-			"Reason":  Config.ErrUnauthorized,
-		}, 0, nil))
-		return
-	}
-}
-
-func IDorGroupCheck(c *gin.Context, level DB.Level, id uint, handler au) {
-	aucheckTemplate(Authentication(c, level) || CheckByID(c, id), c, handler)
-}
-
-func CheckParamType(c *gin.Context, p string, t string, h au) {
-	if tools.StringTypeCheck(p, t) {
-		h(c)
-	} else {
-		c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest, Config.ApiVersion, map[string]string{
-			"Message": Config.MsgValueFormatForID,
-			"Reason":  Config.ErrValueFormat,
-		}, 0, nil))
-	}
-}
-
-func Claims2Level(c *gin.Context) (DB.Level, uint) {
-
-	cl, exist := c.Get("claims")
-	if !exist {
-		return 0, 1
-	}
-
-	claims := cl.(*Middleware.CustomClaims)
-	var user DB.User
-	var group DB.UserGroup
-
-	r := DB.FindUser(DB.Db, "id = ?", (*claims).ID, 1, &user)
-	if r.Error != nil {
-		return 0, 1
-	}
-	DB.Db.Model(&DB.UserGroup{}).Select("Level").Where("id = ?", user.UserGroupID).First(&group)
-	return group.Level, (*claims).ID
 }

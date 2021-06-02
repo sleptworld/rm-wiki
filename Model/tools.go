@@ -9,7 +9,7 @@ import (
 
 func DbError(c *gin.Context,err error){
 	code,msg := DB.CheckErrors(err)
-	c.JSON(http.StatusBadRequest,Api(http.StatusBadRequest,Config.ApiVersion,map[string]string{
+	c.JSON(http.StatusBadRequest, Api(http.StatusBadRequest,Config.ApiVersion,map[string]string{
 		"Message":msg,
 		"Reason":code,
 	},0,nil))

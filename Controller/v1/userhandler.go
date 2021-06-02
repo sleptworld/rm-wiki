@@ -5,158 +5,109 @@ import (
 	"github.com/sleptworld/test/Config"
 	"github.com/sleptworld/test/DB"
 	"github.com/sleptworld/test/Model"
+	"github.com/sleptworld/test/tools"
+	"gorm.io/gorm"
 	"net/http"
-	"strconv"
 )
 
 func GETUser(c *gin.Context) {
-	p := access{
-		idAccess:           false,
-		MinimumPermissions: Config.AdminLevel,
-		handlers : map[DB.Level]ac{
-			Config.AdminLevel: func(c *gin.Context, id uint, level DB.Level) {
-				var res []DB.User
-				l, p, err := common(c,DB.Db,"name",nil,&res)
-				var reset []Model.AllUser
-				Model.User2AllUser(&res,&reset)
-				if err != nil {
-					code,msg := DB.CheckErrors(err)
-					c.JSON(http.StatusBadRequest,Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
-						"Message":msg,
-						"Reason":code,
-					},0,nil))
-					return
-				}
-				c.JSON(http.StatusOK,Model.Api(http.StatusOK,Config.ApiVersion,p,l,reset))
-				return
-			}},
-		}
+	var result []DB.User
+	l,p,err := common(c,DB.Db.Model(&DB.User{}),"id",nil,&result)
+	if err != nil{
+		code,msg := DB.CheckErrors(err)
+		c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
+			"Message":msg,
+			"Reason":code,
+		},0,nil))
+		return
+	}
 
-		p.policy(c)
-
+	res := Model.Users2Users(&result)
+	c.JSON(http.StatusOK, Model.Api(http.StatusOK,Config.ApiVersion,p,int(l),res))
+	return
 }
 
 func POSTUser(c *gin.Context){
-	var regmodel Model.Reg
-	if err := c.BindJSON(&regmodel);err == nil{
+	var regModel Model.Reg
+	if err := c.BindJSON(&regModel);err == nil{
 		var res Model.AllUser
-		if l,err := Model.RegCheck(&regmodel,&res);err == nil{
-			c.JSON(http.StatusOK,Model.Api(http.StatusOK,Config.ApiVersion,nil,int(l),res))
+		if l,err := Model.RegCheck(&regModel,&res);err == nil{
+			c.JSON(http.StatusOK, Model.Api(http.StatusOK,Config.ApiVersion,nil,int(l),res))
 			return
 		} else {
 
 			code,msg := DB.CheckErrors(err)
-			c.JSON(http.StatusBadRequest,Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
+			c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
 				"Message":msg,
 				"Reason":code,
 			},0,nil))
-
 		}
 	}
 }
 
 func GETUserByID(c *gin.Context) {
-	
 	id := c.Param("id")
 	CheckParamType(c,id,"Num", func(c *gin.Context) {
 		var u DB.User
-		var uid uint
-		if res :=DB.FindUser(DB.Db.Preload("Entries").Preload("EditEntries").Preload("Drafts"),
-			"id = ?",id,1,&u);res.Error != nil{
+		if res :=DB.Db.Preload("Entries").Preload("EditEntries").Preload("Drafts").Where("id = ?",id).First(&u);
+		res.Error != nil{
 			code ,msg := DB.CheckErrors(res.Error)
-			c.JSON(http.StatusBadRequest,Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
+			c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
 				"Message":msg,
 				"Reason":code,
 			},0,nil))
 			return
+		} else {
+			resShow := Model.User2User(&u)
+			c.JSON(http.StatusOK, Model.Api(http.StatusOK,Config.ApiVersion,nil,1,resShow))
+			return
 		}
-		intNum,_ := strconv.Atoi(id)
-		uid = uint(intNum)
-		p := access{
-			idAccess:           true,
-			id:                 uid,
-			MinimumPermissions: 3,
-			handlers: map[DB.Level]ac{
-				Config.AdminLevel : func(c *gin.Context, id uint, level DB.Level) {
-					var result Model.SingleUser
-					Model.User2User(&u,&result)
-					c.JSON(http.StatusOK,Model.Api(http.StatusOK,Config.ApiVersion,nil,1,result))
-					c.Abort()
-					return
-				},
-			},
-		}
-	p.policy(c)
 	})
 }
 
 func PATCHUserById(c *gin.Context){
 	id := c.Param("id")
 	CheckParamType(c,id,"Num", func(c *gin.Context) {
-		intNum,_ := strconv.Atoi(id)
-		uid := uint(intNum)
-		p := access{
-			idAccess:           true,
-			id:                 uid,
-			MinimumPermissions: Config.AdminLevel,
-			handlers: map[DB.Level]ac{
-				Config.AdminLevel : func(c *gin.Context, id uint, level DB.Level) {
-					var updateData Model.UserUpdate
-					if err := c.BindJSON(&updateData);err != nil{
-						c.JSON(http.StatusBadRequest,Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
-							"Message":"",
-							"Reason":"",
-						},0,nil))
-						return
-					}
-					reset := Model.UserUpdate2User(&updateData)
-
-					cb := DB.User{}
-					if l,err := DB.UpdateUser(DB.Db,&reset,&cb);err != nil{
-						code,msg := DB.CheckErrors(err)
-						c.JSON(http.StatusBadRequest,Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
-							"Message":msg,
-							"Reason":code,
-						},0,nil))
-						return
-					}else {
-						var rb Model.SingleUser
-						Model.User2User(&cb,&rb)
-						c.JSON(http.StatusOK, Model.Api(http.StatusOK, Config.ApiVersion, nil, int(l),rb))
-					}
-				},
-			},
+		var updateData Model.UserUpdate
+		if err := c.BindJSON(&updateData); err != nil {
+			c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest, Config.ApiVersion, map[string]string{
+				"Message": "",
+				"Reason":  "",
+			}, 0, nil))
+			return
 		}
-		p.policy(c)
+		userModel := Model.UserModel{}
+		userModel.InitModel(&updateData)
+		var ores DB.User
+		if l, err := userModel.Update(&ores); err != nil {
+			code, msg := DB.CheckErrors(err)
+			c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest, Config.ApiVersion, map[string]string{
+				"Message": msg,
+				"Reason":  code,
+			}, 0, nil))
+			return
+		} else {
+			res := Model.User2User(&ores)
+			c.JSON(http.StatusOK, Model.Api(http.StatusOK, Config.ApiVersion, nil, int(l), res))
+		}
 	})
 }
 
 func DELETEUserById(c *gin.Context){
 	id := c.Param("id")
 	CheckParamType(c,id,"Num", func(c *gin.Context) {
-		intNum,_ := strconv.Atoi(id)
-		uid := uint(intNum)
-		p := access{
-			idAccess:           true,
-			id:                 uid,
-			MinimumPermissions: Config.AdminLevel,
-			handlers: map[DB.Level]ac{
-				Config.AdminLevel: func(c *gin.Context, i uint, level DB.Level) {
-					if l,err := DB.DeleteUser(DB.Db,"id = ?",id,1);err != nil{
-						code,msg := DB.CheckErrors(err)
-						c.JSON(http.StatusBadRequest,Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
-							"Message":msg,
-							"Reason":code,
-						},0,nil))
-						return
-					} else {
-						c.JSON(http.StatusOK,Model.Api(http.StatusOK,Config.ApiVersion,nil,int(l),map[string]string{
-							"msg":"ok",
-						}))
-					}
-				},
-			},
-		}
-		p.policy(c)
-	})
+		uid ,_ := tools.String2uint(id)
+		m := DB.Init(&DB.User{Model:gorm.Model{ID: uid}})
+		if l,err := m.Delete("",nil);err != nil{
+			code,msg := DB.CheckErrors(err)
+			c.JSON(http.StatusBadRequest, Model.Api(http.StatusBadRequest,Config.ApiVersion, map[string]string{
+				"Message":msg,
+				"Reason":code,
+			},0,nil))
+				return
+			} else {
+				c.JSON(http.StatusOK, Model.Api(http.StatusOK,Config.ApiVersion,nil,int(l),map[string]string{
+					"msg":"ok",}))
+			}
+})
 }

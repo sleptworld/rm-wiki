@@ -64,6 +64,13 @@ func (e *EntryModel) InitModel(s interface{})  {
 			convertTags := DB.Tags2Entry(originTags)
 			set.Set(reflect.ValueOf(convertTags))
 
+		case "Cat":
+			var cat DB.Cat
+			_, err2 := DB.CatCheck(value.String(),&cat)
+			if err2 != nil {
+				return
+			}
+			set.Set(reflect.ValueOf(cat))
 		default:
 			return
 		}
@@ -187,7 +194,7 @@ type SingleEntry struct {
 	Info      string
 }
 
-type data struct {
+type Data struct {
 	ID         string      `json:"id"`
 	Lang       string      `json:"lang"`
 	TotalItems int         `json:"totalItems"`
@@ -197,21 +204,21 @@ type data struct {
 type SuccessRes struct {
 	ApiVersion string            `json:"apiVersion"`
 	Params     map[string]string `json:"params"`
-	Data       data              `json:"data"`
+	Data       Data              `json:"data"`
 }
 
-type errs struct {
+type Errs struct {
 	Reason string
 }
-type err struct {
+type Err struct {
 	Code    http.ConnState
 	Message string
-	Errors  []errs
+	Errors  []Errs
 }
 
 type ErrorRes struct {
 	ApiVersion string `json:"apiVersion"`
-	Error      err
+	Error      Err
 }
 
 // user

@@ -16,7 +16,7 @@ func Api(Status http.ConnState,apiVersion string,params map[string]string,l int,
 		if err != nil{
 			return nil
 		}
-		d := data{
+		d := Data{
 			ID:         u.String(),
 			TotalItems: l,
 			Lang: params["lang"],
@@ -29,11 +29,11 @@ func Api(Status http.ConnState,apiVersion string,params map[string]string,l int,
 		res := ErrorRes{
 			ApiVersion: apiVersion,
 		}
-		
-		err := err{
+
+		err := Err{
 			Code:    Status,
 			Message: params["Message"],
-			Errors:  []errs{
+			Errors:  []Errs{
 				{Reason: params["Reason"]},
 			},
 		}

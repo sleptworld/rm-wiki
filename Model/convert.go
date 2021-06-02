@@ -2,7 +2,6 @@ package Model
 
 import (
 	"github.com/sleptworld/test/DB"
-	"gorm.io/gorm"
 )
 
 
@@ -82,7 +81,7 @@ func User2User(from *DB.User) *SingleUser{
 
 	var group userGroup
 
-	DB.Init(&DB.UserGroup{Model : gorm.Model{ID: from.UserGroupID}}).Query(&group,1,"",nil)
+	group.GroupName = DB.GetRolesByUser(from.ID)[0]
 
 	var result = SingleUser{
 		ID:          from.ID,
@@ -112,7 +111,7 @@ func Users2Users(from *[]DB.User) (to *[]AllUser) {
 	for _,value := range *from{
 
 		var group userGroup
-		DB.Db.Where(&DB.UserGroup{}).Where("id = ?",value.UserGroupID).First(&group)
+		group.GroupName = DB.GetRolesByUser(value.ID)[0]
 		temp := AllUser{
 			ID:        value.ID,
 			CreatedAt: value.CreatedAt,
